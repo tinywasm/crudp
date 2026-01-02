@@ -4,27 +4,27 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdvelop/crudp"
+	"github.com/tinywasm/crudp"
+	. "github.com/tinywasm/fmt"
 )
 
 func CrudPErrorHandlingShared(t *testing.T) {
-	cp := crudp.NewDefault()
+	cp := NewTestCrudP()
 
-	// Test with invalid packet
-	invalidPacket := []byte("invalid")
-	_, err := cp.ProcessPacket(context.Background(), invalidPacket)
-	if err == nil {
-		t.Error("Expected error for invalid packet")
-	}
+	t.Run("Invalid Handler ID", func(t *testing.T) {
+		req := &crudp.BatchRequest{
+			Packets: []crudp.Packet{
+				{Action: 'c', HandlerID: 99, ReqID: "err-1"},
+			},
+		}
 
-	// Test with non-existent handler
-	invalidHandlerPacket, err := cp.EncodePacket('c', 99, "", &User{Name: "Test"})
-	if err != nil {
-		t.Fatalf("Failed to encode packet: %v", err)
-	}
+		resp, err := cp.Execute(context.Background(), req)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
+		}
 
-	_, err = cp.ProcessPacket(context.Background(), invalidHandlerPacket)
-	if err == nil {
-		t.Error("Expected error for non-existent handler")
-	}
+		if resp.Results[0].MessageType != uint8(Msg.Error) {
+			t.Errorf("Expected error message type, got %v", resp.Results[0].MessageType)
+		}
+	})
 }

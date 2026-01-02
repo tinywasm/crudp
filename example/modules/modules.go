@@ -1,8 +1,8 @@
 package modules
 
 import (
-	"github.com/cdvelop/crudp/example/modules/patient"
-	"github.com/cdvelop/crudp/example/modules/user"
+	"github.com/tinywasm/crudp/example/modules/patient"
+	"github.com/tinywasm/crudp/example/modules/user"
 )
 
 // Init returns all business modules

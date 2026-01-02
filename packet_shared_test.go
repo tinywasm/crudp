@@ -1,30 +1,11 @@
 package crudp_test
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"strings"
 	"testing"
 
-	"github.com/cdvelop/crudp"
-	. "github.com/cdvelop/tinystring"
+	"github.com/tinywasm/crudp"
+	. "github.com/tinywasm/fmt"
 )
-
-// Test handler that returns a response with broadcast targets
-type sseHandler struct{}
-
-type sseResponse struct {
-	Message string `json:"message"`
-}
-
-func (r sseResponse) Response() (data any, broadcast []string, err error) {
-	return r, []string{"channel1", "channel2"}, nil
-}
-
-func (h *sseHandler) Create(ctx context.Context, data ...any) any {
-	return sseResponse{Message: "broadcast"}
-}
 
 func PacketResultMessageTypeShared(t *testing.T) {
 	t.Run("MessageType Success", func(t *testing.T) {
@@ -107,60 +88,5 @@ func ActionConversionShared(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func SSERoutingShared(t *testing.T, cp *crudp.CrudP) {
-	// Capture log output
-	var buf bytes.Buffer
-
-	cp.SetLogger(func(v ...any) {
-		for i, item := range v {
-			if i > 0 {
-				buf.WriteString(" ")
-			}
-			buf.WriteString(fmt.Sprint(item))
-		}
-		buf.WriteString("\n")
-	})
-
-	// Register handler
-	cp.RegisterHandler(&sseHandler{})
-
-	// Create packet without data - SSE handler doesn't need input
-	createPacket := crudp.Packet{
-		Action:    'c',
-		HandlerID: 0,
-		ReqID:     "test-sse",
-		Data:      [][]byte{}, // Empty data slice
-	}
-
-	// Process packet
-	batchReq := crudp.BatchRequest{Packets: []crudp.Packet{createPacket}}
-	t.Logf("BatchRequest before encoding: %+v", batchReq)
-	t.Logf("Packet count: %d", len(batchReq.Packets))
-	if len(batchReq.Packets) > 0 {
-		t.Logf("First packet: %+v", batchReq.Packets[0])
-	}
-	batchBytes, err := cp.Codec().Encode(batchReq)
-	if err != nil {
-		t.Fatalf("Failed to encode batch request: %v", err)
-	}
-	t.Logf("Encoded batch request: %s", string(batchBytes))
-	_, err = cp.ProcessBatch(context.Background(), batchBytes)
-	if err != nil {
-		t.Fatalf("Failed to process batch: %v", err)
-	}
-
-	// Verify log output
-	logOutput := buf.String()
-	if !strings.Contains(logOutput, "Broadcasting to channel: channel1") {
-		t.Error("Expected log output to contain 'Broadcasting to channel: channel1'")
-	}
-	if !strings.Contains(logOutput, "Broadcasting to channel: channel2") {
-		t.Error("Expected log output to contain 'Broadcasting to channel: channel2'")
-	}
-	if !strings.Contains(logOutput, `data: {"message":"broadcast"}`) {
-		t.Errorf("Expected log output to contain 'data: {\"message\":\"broadcast\"}', got:\n%s", logOutput)
 	}
 }

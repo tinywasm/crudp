@@ -1,6 +1,4 @@
-github.com/cdvelop/tinyjson v0.0.8 h1:jRDlUfI8dCCuQQPVMEWGpB+D3EoSrsYdsqEmNUOxWaA=
-github.com/cdvelop/tinyjson v0.0.8/go.mod h1:rQayqMxEL5VyTVp0OcqKmuV9d4tLYI3sEibDLsDGNP4=
-github.com/cdvelop/tinystring v0.12.0 h1:+L1+nR7kt8Gm59JlcOTGPuNDOLoHyY8yqSxo4jRWtTY=
-github.com/cdvelop/tinystring v0.12.0/go.mod h1:m12IsLVkhIRv/kA7bercPtzfdZhx2WtuZUPZWZhUsgw=
-github.com/cdvelop/tinytime v0.2.6 h1:+XGH9nm85yoQzZeG0TZ8eJpWKdaistIbxHI37PVth2o=
-github.com/cdvelop/tinytime v0.2.6/go.mod h1:Qge1Lm+JZKoKZxHWBEyDtSVrH1gGBgKjoz+doFmCyEU=
+github.com/tinywasm/binary v0.3.1 h1:Gs6fXUSDIpka32k4zJ/XodkNKsZVCwRlMn0eQk4pCpU=
+github.com/tinywasm/binary v0.3.1/go.mod h1:z4/i+7rATFcJP+soZ9LYMsE6d8YiXEuOhZnuzTQRsWc=
+github.com/tinywasm/fmt v0.12.6 h1:AfP5wdOCxtI8pKDKxPD5MJGGPaDiNSe283LqVX7PG3I=
+github.com/tinywasm/fmt v0.12.6/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=

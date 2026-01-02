@@ -4,209 +4,65 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdvelop/crudp"
+	"github.com/tinywasm/crudp"
 )
 
-// TestHandlerInstanceReuse verifies if the handler instances are being reused
-// This test demonstrates the potential problem mentioned:
-// "estamos reutilizando la misma instancia del handler"
 func HandlerInstanceReuseShared(t *testing.T) {
-	// Initialize CRUDP with handlers
-	cp := crudp.NewDefault()
-	cp.SetLogger(func(msg ...any) {
-		t.Logf("DEBUG: %v", msg)
-	})
+	cp := NewTestCrudP()
 	if err := cp.RegisterHandler(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
-	// Create two different users with different data
-	user1 := User{Name: "Alice", Email: "alice@example.com"}
-	user2 := User{Name: "Bob", Email: "bob@example.com"}
+	for i := 0; i < 2; i++ {
+		name := "User " + string(rune('A'+i))
+		userData, _ := testEncode(cp, &User{Name: name})
 
-	// Encode packets for both users
-	packet1, err := cp.EncodePacket('c', 0, "", user1)
-	if err != nil {
-		t.Fatalf("Failed to encode first packet: %v", err)
-	}
-
-	packet2, err := cp.EncodePacket('c', 0, "", user2)
-	if err != nil {
-		t.Fatalf("Failed to encode second packet: %v", err)
-	}
-
-	// Process first packet
-	response1, err := cp.ProcessPacket(context.Background(), packet1)
-	if err != nil {
-		t.Fatalf("Failed to process first packet: %v", err)
-	}
-
-	// Process second packet
-	response2, err := cp.ProcessPacket(context.Background(), packet2)
-	if err != nil {
-		t.Fatalf("Failed to process second packet: %v", err)
-	}
-
-	// Decode both responses to check the data
-	var packetResp1, packetResp2 crudp.Packet
-	if err := cp.Codec().Decode(response1, &packetResp1); err != nil {
-		t.Fatalf("Failed to decode first response: %v", err)
-	}
-
-	if err := cp.Codec().Decode(response2, &packetResp2); err != nil {
-		t.Fatalf("Failed to decode second response: %v", err)
-	}
-
-	// Decode the response data to see what was actually processed
-	if len(packetResp1.Data) > 0 {
-		var result1 User
-		if err := cp.Codec().Decode(packetResp1.Data[0], &result1); err != nil {
-			t.Fatalf("Failed to decode first result: %v", err)
+		req := &crudp.BatchRequest{
+			Packets: []crudp.Packet{
+				{Action: 'c', HandlerID: 0, Data: [][]byte{userData}},
+			},
 		}
-		t.Logf("First result: %+v", result1)
 
-		// Check if the first user data is preserved correctly
-		t.Logf("First user details - Name: '%s', Email: '%s', ID: %d",
-			result1.Name, result1.Email, result1.ID)
-		if result1.Name != "Alice" {
-			t.Errorf("Expected first user name 'Alice', got '%s'", result1.Name)
-			t.Error("This indicates handler instance reuse problem!")
+		resp, err := cp.Execute(context.Background(), req)
+		if err != nil {
+			t.Fatalf("Execute failed: %v", err)
 		}
-		if result1.Email != "alice@example.com" {
-			t.Errorf("Expected first user email 'alice@example.com', got '%s'", result1.Email)
-			t.Error("This indicates handler instance reuse problem!")
-		}
-	}
 
-	if len(packetResp2.Data) > 0 {
-		var result2 User
-		if err := cp.Codec().Decode(packetResp2.Data[0], &result2); err != nil {
-			t.Fatalf("Failed to decode second result: %v", err)
-		}
-		t.Logf("Second result: %+v", result2)
-
-		// Check if the second user data is preserved correctly
-		t.Logf("Second user details - Name: '%s', Email: '%s', ID: %d",
-			result2.Name, result2.Email, result2.ID)
-		if result2.Name != "Bob" {
-			t.Errorf("Expected second user name 'Bob', got '%s'", result2.Name)
-			t.Error("This indicates handler instance reuse problem!")
-		}
-		if result2.Email != "bob@example.com" {
-			t.Errorf("Expected second user email 'bob@example.com', got '%s'", result2.Email)
-			t.Error("This indicates handler instance reuse problem!")
-		}
-	}
-}
-
-// TestHandlerInstanceReuse_KNOWN_LIMITATION demonstrates the handler instance reuse issue
-// This test FAILS BY DESIGN to show that handlers are reused, which can cause data corruption
-// For production use, implement proper instance factories for your specific types
-func HandlerInstanceReuseKnownLimitationShared(t *testing.T) {
-	t.Skip("Skipping test that demonstrates known limitation - handler instance reuse")
-	cp := crudp.NewDefault()
-
-	// Create a handler with initial state
-	originalHandler := &User{ID: 999, Name: "OriginalHandler", Email: "original@test.com"}
-	if err := cp.RegisterHandler(originalHandler); err != nil {
-		t.Fatalf("Failed to load handlers: %v", err)
-	}
-
-	t.Logf("Original handler before processing: %+v", originalHandler)
-
-	// Process a user with different data
-	user := User{Name: "ProcessedUser", Email: "processed@test.com"}
-	packet, err := cp.EncodePacket('c', 0, "", user)
-	if err != nil {
-		t.Fatalf("Failed to encode packet: %v", err)
-	}
-
-	response, err := cp.ProcessPacket(context.Background(), packet)
-	if err != nil {
-		t.Fatalf("Failed to process packet: %v", err)
-	}
-
-	t.Logf("Original handler after processing: %+v", originalHandler)
-
-	// Check if the original handler was modified
-	if originalHandler.Name != "OriginalHandler" {
-		t.Errorf("PROBLEM DETECTED: Original handler name was modified from 'OriginalHandler' to '%s'", originalHandler.Name)
-		t.Error("This confirms the handler instance reuse problem!")
-	}
-	if originalHandler.Email != "original@test.com" {
-		t.Errorf("PROBLEM DETECTED: Original handler email was modified from 'original@test.com' to '%s'", originalHandler.Email)
-		t.Error("This confirms the handler instance reuse problem!")
-	}
-	if originalHandler.ID != 999 {
-		t.Errorf("PROBLEM DETECTED: Original handler ID was modified from 999 to %d", originalHandler.ID)
-		t.Error("This confirms the handler instance reuse problem!")
-	}
-
-	// Decode the response to see what was processed
-	var responsePacket crudp.Packet
-	if err := cp.DecodePacket(response, &responsePacket); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if len(responsePacket.Data) > 0 {
 		var result User
-		if err := cp.Codec().Decode(responsePacket.Data[0], &result); err != nil {
-			t.Fatalf("Failed to decode result: %v", err)
-		}
+		testDecode(cp, resp.Results[0].Data[0], &result)
 
-		t.Logf("Processed result: %+v", result)
+		if result.Name != name {
+			t.Errorf("Iteration %d: expected name %s, got %s", i, name, result.Name)
+		}
 	}
 }
 
-// TestConcurrentHandlerAccess tests if concurrent access to handlers causes issues
 func ConcurrentHandlerAccessShared(t *testing.T) {
-	cp := crudp.NewDefault()
+	cp := NewTestCrudP()
 	if err := cp.RegisterHandler(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
-	// Create multiple users with unique data
-	users := []User{
-		{Name: "User1", Email: "user1@test.com"},
-		{Name: "User2", Email: "user2@test.com"},
-		{Name: "User3", Email: "user3@test.com"},
-	}
+	names := []string{"Alice", "Bob", "Charlie", "Dave"}
 
-	// Process multiple packets and check if data gets mixed up
-	results := make([]string, len(users))
+	for _, name := range names {
+		userData, _ := testEncode(cp, &User{Name: name})
+		req := &crudp.BatchRequest{
+			Packets: []crudp.Packet{
+				{Action: 'c', HandlerID: 0, Data: [][]byte{userData}},
+			},
+		}
 
-	for i, user := range users {
-		packet, err := cp.EncodePacket('c', 0, "", user)
+		resp, err := cp.Execute(context.Background(), req)
 		if err != nil {
-			t.Fatalf("Failed to encode packet %d: %v", i, err)
+			t.Fatalf("Execute failed for %s: %v", name, err)
 		}
 
-		response, err := cp.ProcessPacket(context.Background(), packet)
-		if err != nil {
-			t.Fatalf("Failed to process packet %d: %v", i, err)
-		}
+		var result User
+		testDecode(cp, resp.Results[0].Data[0], &result)
 
-		var responsePacket crudp.Packet
-		if err := cp.DecodePacket(response, &responsePacket); err != nil {
-			t.Fatalf("Failed to decode response %d: %v", i, err)
-		}
-
-		if len(responsePacket.Data) > 0 {
-			var result User
-			if err := cp.Codec().Decode(responsePacket.Data[0], &result); err != nil {
-				t.Fatalf("Failed to decode result %d: %v", i, err)
-			}
-
-			results[i] = result.Name
-			t.Logf("Processed user %d: %s (expected %s)", i, result.Name, user.Name)
-		}
-	}
-
-	// Verify that each result matches the expected user
-	for i, expected := range []string{"User1", "User2", "User3"} {
-		if results[i] != expected {
-			t.Errorf("Result %d: expected '%s', got '%s'", i, expected, results[i])
-			t.Error("This indicates handler instance reuse is causing data corruption!")
+		if result.Name != name {
+			t.Errorf("Expected %s, got %s", name, result.Name)
 		}
 	}
 }

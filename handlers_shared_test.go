@@ -4,8 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdvelop/crudp"
-	. "github.com/cdvelop/tinystring"
+	"github.com/tinywasm/crudp"
 )
 
 // Test handler with explicit name
@@ -15,13 +14,9 @@ type ExplicitCreateResponse struct {
 	Message string `json:"message"`
 }
 
-func (r ExplicitCreateResponse) Response() (data any, broadcast []string, err error) {
-	return r, nil, nil
-}
-
 func (h *explicitNameHandler) HandlerName() string { return "my_custom_name" }
-func (h *explicitNameHandler) Create(ctx context.Context, data ...any) any {
-	return ExplicitCreateResponse{Message: "created"}
+func (h *explicitNameHandler) Create(ctx context.Context, data ...any) (any, error) {
+	return ExplicitCreateResponse{Message: "created"}, nil
 }
 
 // Test handler without explicit name (uses reflection)
@@ -32,25 +27,17 @@ type CreateResponse struct {
 	Status string `json:"status"`
 }
 
-func (r CreateResponse) Response() (data any, broadcast []string, err error) {
-	return r, nil, nil
-}
-
 type ReadResponse struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
-func (r ReadResponse) Response() (data any, broadcast []string, err error) {
-	return r, nil, nil
+func (h *UserController) Create(ctx context.Context, data ...any) (any, error) {
+	return CreateResponse{ID: 1, Status: "created"}, nil
 }
 
-func (h *UserController) Create(ctx context.Context, data ...any) any {
-	return CreateResponse{ID: 1, Status: "created"}
-}
-
-func (h *UserController) Read(ctx context.Context, data ...any) any {
-	return ReadResponse{ID: 1, Name: "test"}
+func (h *UserController) Read(ctx context.Context, data ...any) (any, error) {
+	return ReadResponse{ID: 1, Name: "test"}, nil
 }
 
 // Handler with validation
@@ -60,24 +47,24 @@ type ValidatedCreateResponse struct {
 	Message string `json:"message"`
 }
 
-func (r ValidatedCreateResponse) Response() (data any, broadcast []string, err error) {
-	return r, nil, nil
-}
-
-func (h *ValidatedHandler) Create(ctx context.Context, data ...any) any {
-	return ValidatedCreateResponse{Message: "validated_created"}
+func (h *ValidatedHandler) Create(ctx context.Context, data ...any) (any, error) {
+	return ValidatedCreateResponse{Message: "validated_created"}, nil
 }
 
 func (h *ValidatedHandler) Validate(action byte, data ...any) error {
 	if len(data) == 0 {
-		return Err("no data provided")
+		return errorString("no data provided")
 	}
 	return nil
 }
 
+type errorString string
+
+func (e errorString) Error() string { return string(e) }
+
 func (h *ValidatedHandler) ValidateField(fieldName, value string) error {
 	if fieldName == "email" && value == "" {
-		return Err("email is required")
+		return errorString("email is required")
 	}
 	return nil
 }
@@ -85,7 +72,7 @@ func (h *ValidatedHandler) ValidateField(fieldName, value string) error {
 // Shared tests
 func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Explicit HandlerName", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		err := cp.RegisterHandler(&explicitNameHandler{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -98,7 +85,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Reflection Name (snake_case)", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		err := cp.RegisterHandler(&UserController{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -111,7 +98,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Nil Handler Error", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		err := cp.RegisterHandler(nil)
 		if err == nil {
 			t.Error("expected error for nil handler")
@@ -119,7 +106,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Multiple Handlers", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		err := cp.RegisterHandler(
 			&explicitNameHandler{},
 			&UserController{},
@@ -143,7 +130,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 
 func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Validation Passes", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&ValidatedHandler{})
 
 		ctx := context.Background()
@@ -157,7 +144,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Validation Fails", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&ValidatedHandler{})
 
 		ctx := context.Background()
@@ -186,7 +173,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 
 func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Create Operation", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
 		ctx := context.Background()
@@ -204,7 +191,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Read Operation", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
 		ctx := context.Background()
@@ -222,7 +209,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Unimplemented Action", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{}) // Only has Create and Read
 
 		ctx := context.Background()
@@ -233,7 +220,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 	})
 
 	t.Run("Invalid Handler ID", func(t *testing.T) {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
 		ctx := context.Background()

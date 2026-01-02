@@ -3,13 +3,11 @@
 package main
 
 import (
-	"context"
-	"io"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/cdvelop/crudp/example/pkg/router"
+	"github.com/tinywasm/crudp/example/pkg/router"
 )
 
 func main() {
@@ -47,18 +45,8 @@ func main() {
 	// Initialize CRUDP router
 	cp := router.NewRouter()
 
-	// API endpoint for CRUDP protocol
-	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
-		payload, _ := io.ReadAll(r.Body)
-		response, err := cp.ProcessPacket(context.Background(), payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/octet-stream")
-		w.Write(response)
-	})
+	// Register CRUDP API routes
+	cp.RegisterRoutes(mux)
 
 	// Create http.Server with Addr and Handler set
 	server := &http.Server{
@@ -66,6 +54,7 @@ func main() {
 		Handler: mux,
 	}
 
+	log.Printf("Server starting on http://localhost:6060")
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}

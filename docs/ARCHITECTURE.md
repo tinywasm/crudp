@@ -1,134 +1,93 @@
 # CRUDP Architecture
 
 > **Status:** Specification Document  
-> **Last Updated:** December 2024
+> **Last Updated:** January 2026
 
 ## Overview
 
-CRUDP (CRUD Protocol) is a binary/JSON protocol for isomorphic Go applications, enabling seamless communication between WASM frontend and Go backend using the same handler logic on both sides.
+CRUDP (CRUD Protocol) is a logic-only execution engine for isomorphic Go applications. It handles the registration and execution of CRUD operations, delegating transport/batching to tools like `tinywasm/broker`.
 
 ## Core Principles
 
-1. **Isomorphic Handlers:** Same handler code runs on frontend (WASM) and backend (Server) with build tags
-2. **Zero Framework Coupling:** Handlers don't import CRUDP, only implement simple interfaces
-3. **Batch Processing:** Multiple operations consolidated into single HTTP requests
-4. **SSE Responses:** Server-Sent Events for async response delivery
-5. **TinyGo Compatible:** No maps in hot paths, minimal allocations
+1. **Isomorphic Handlers:** Same handler code runs on frontend (WASM) and backend (Server).
+2. **Zero Transport Coupling:** CRUDP doesn't know about HTTP, WebSockets, or SSE.
+3. **Explicit Error Handling:** CRUD methods return `(any, error)` for reliable flow control.
+4. **Protocol Agnostic:** Works with any data structure defined in `tinywasm/packet`.
+5. **TinyGo Compatible:** Optimized for small WASM binaries.
 
-## Architecture Diagram
+## Modular Architecture
+
+1. **`tinywasm/broker`**: Handles client-side batching and consolidation of requests.
+2. **`tinywasm/crudp`**: (This repo) Defines protocol types (Packet, BatchRequest, BatchResponse) and maps them to registered handlers.
+
+### Workflow Diagram
 
 ```mermaid
-flowchart TB
-        subgraph FRONTEND_WASM["FRONTEND (WASM)"]
-                direction LR
-                FC["Component\n(tinydom)"] --> FH["Handler\n(front)"]
-                FH --> FS["Sender\n(tinydom)"]
-                FS --> FB["Broker\n(crudp)\n(Queue + BatchWindow)"]
-        end
+flowchart TD
+    subgraph Client["FRONTEND (WASM)"]
+        UI["UI Component"] --> B["tinywasm/broker\n(Queue / Consolidation)"]
+    end
 
-        %% HTTP request to backend
-        FB -- "HTTP POST /api" --> BE["Broker (process batch)\n(backend)"]
+    B -- "Transport (HTTP/WS)" --> S["Server HTTP Handler\n(crudp.RegisterRoutes)"]
 
-        subgraph BACKEND["BACKEND (Server)"]
-                direction TB
-                BE --> BCall["callHandler"]
-                BCall --> BH["Handler\n(back)"]
-                BH --> Resp["Response (data)"]
-                Resp -- "SSE /events" --> FB
-        end
+    subgraph Backend["BACKEND (Server)"]
+        S --> E["crudp.Execute()"]
+        E --> H["Registered Handlers\n(Create, Read, ...)"]
+        H --> DB[(Database)]
+    end
 
-        %% Incoming messages flow back into frontend
-        subgraph FRONTEND_RECEIVE["FRONTEND (WASM - receive)"]
-                direction LR
-                FB2["Broker (receive)"] --> FCall["callHandler"]
-                FCall --> FH2["Handler\n(front)"]
-                FH2 --> FDOM["DOM\n(tinydom)"]
-        end
-
-        %% Link SSE to frontend receive broker
-        Resp -- "SSE /events" --> FB2
-
+    H -- "(data, error)" --> E
+    E -- "packet.BatchResponse" --> S
+    S -- "JSON/Binary" --> Client
 ```
 
 ## Key Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Serialization | JSON (tinyjson) default, binary optional | SSR compatibility, tinyjson optimized for WASM |
-| Handler signature | `func(ctx, data ...any) any` | Simple, supports batch data, frontend returns nil |
-| Packet structure | 1 Packet = N data items (Data [][]byte) | Efficient bulk operations, multiple responses |
-| Batching | Consolidate by Handler+Action | Reduce HTTP requests |
-| Message types | `tinystring.MessageType` (uint8: 0-4) | Replaces bool Success, 5 states (Normal, Info, Error, Warning, Success) |
-| HTTP methods | POST/GET/PUT/DELETE → c/r/u/d | Standard REST mapping |
-| HandlerName | Optional via reflection + SnakeLow() | Fallback to `reflect.TypeOf().Name()` converted to snake_case |
-| Logger | Configured via method, not Config | `SetLogger()`/`DisableLogger()` avoid nil checks |
-
-## Implementation Steps
-
-| Step | Status | Document | Description |
-|------|--------|----------|-------------|
-| 1 | 🔄 Pending | [STEP_01](issues/STEP_01_PACKET_STRUCTURE.md) | PacketResult with MessageType and Data [][]byte |
-| 2 | 🔄 Pending | [STEP_02](issues/STEP_02_HANDLER_REGISTRATION.md) | Handler name via reflection, Validator, return `any` |
-| 3 | 🔄 Pending | [STEP_03](issues/STEP_03_CONFIG_SYSTEM.md) | Config with Codec interface (Logger via method only) |
-| 4 | 🔄 Pending | [STEP_04](issues/STEP_04_BROKER_BATCHING.md) | Broker with consolidation and tinytime Timer |
-| 5 | 🔄 Pending | [STEP_05](issues/STEP_05_UPDATE_EXISTING.md) | Update existing code and tests |
-
-## Implementation Prompt
-
-For LLM implementation, see: [PROMPT_IMPLEMENTATION.md](issues/PROMPT_IMPLEMENTATION.md)
+| Serialization | `Encode`/`Decode` funcs | Support JSON (tinywasm/json) or Binary (tinywasm/binary) formats |
+| Handler signature | `func(ctx, data ...any) (any, error)` | Explicit errors allow better client-side feedback |
+| Packet structure | Internal to `crudp` | Unified protocol definition and execution |
+| Batching | Delegated to `tinywasm/broker` | Keep CRUDP core simple and focused on execution |
+| Message types | `0-4` (uint8) | Normal, Info, Error, Warning, Success from `tinywasm/fmt` |
+| HTTP methods | POST/GET/PUT/DELETE → c/r/u/d | Standard CRUD mapping |
+| HandlerName | Automatic or Explicit | Use `NamedHandler` interface or reflection fallback |
 
 ## Dependencies
 
 ```
 crudp
-├── github.com/cdvelop/tinyjson   # Default codec (JSON)
-├── github.com/cdvelop/tinystring # Errors, MessageType, SnakeLow
-├── github.com/cdvelop/tinytime   # Timer for broker (WASM compatible)
-└── github.com/cdvelop/fetchgo    # HTTP client (WASM)
+├── github.com/tinywasm/binary # Recommended codec
+└── github.com/tinywasm/fmt    # String conversion and message types
 ```
 
 ## Key Interfaces
 
 ```go
-// Response interface for routing (handlers can return this)
-type Response interface {
-    Response() (data any, broadcast []string, err error)
-}
-
-// CRUD interfaces (return any, not []any)
-type Creator interface { Create(ctx context.Context, data ...any) any }
-type Reader interface  { Read(ctx context.Context, data ...any) any }
-type Updater interface { Update(ctx context.Context, data ...any) any }
-type Deleter interface { Delete(ctx context.Context, data ...any) any }
+// CRUD interfaces - return (any, error)
+type Creator interface { Create(ctx context.Context, data ...any) (any, error) }
+type Reader interface  { Read(ctx context.Context, data ...any) (any, error) }
+type Updater interface { Update(ctx context.Context, data ...any) (any, error) }
+type Deleter interface { Delete(ctx context.Context, data ...any) (any, error) }
 
 // Optional interfaces
-type NamedHandler interface { HandlerName() string }  // Override auto name
+type NamedHandler interface { HandlerName() string }
 type Validator interface { Validate(action byte, data ...any) error }
 type FieldValidator interface { ValidateField(fieldName, value string) error }
-
-// Codec interface (tinyjson default)
-type Codec interface {
-    Encode(data any) ([]byte, error)
-    Decode(data []byte, v any) error
-}
 ```
 
-## Test Pattern
+## Implementation Status
 
-Tests work in both environments using separate files:
-
-```
-*_shared_test.go  - Shared logic (no build tags)
-*_stlib_test.go   - Backend entry (//go:build !wasm)
-*_wasm_test.go    - WASM entry (//go:build wasm)
-```
+| Feature | Status | Package |
+|------|--------|----------|
+| Batching | ✅ Done | `tinywasm/broker` |
+| Execution | ✅ Done | `tinywasm/crudp` |
+| Protocol Details | ✅ Done | `tinywasm/crudp` |
+| HTTP Integration | ✅ Done | `tinywasm/crudp` (RegisterRoutes) |
 
 ## Related Documentation
 
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) - How to integrate CRUDP
-- [CONFIG.md](CONFIG.md) - Configuration options
+- [INITIALIZATION.md](INITIALIZATION.md) - Initialization and serialization
+- [HANDLER_REGISTER.md](HANDLER_REGISTER.md) - How to create and register handlers
 - [LIMITATIONS.md](LIMITATIONS.md) - Supported data types
-
-## External Dependencies
-
-- **tinydom:** Sender interface, Form validation - See [tinydom/docs/ROADMAP.md]

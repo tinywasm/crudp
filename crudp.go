@@ -1,104 +1,47 @@
 package crudp
 
-import (
-	"context"
-)
+import "context"
 
-// actionHandler groups CRUD functions for a registration index
 type actionHandler struct {
 	name    string
 	index   uint8
 	handler any
-	Create  func(context.Context, ...any) any
-	Read    func(context.Context, ...any) any
-	Update  func(context.Context, ...any) any
-	Delete  func(context.Context, ...any) any
+	Create  func(ctx context.Context, data ...any) (any, error)
+	Read    func(ctx context.Context, data ...any) (any, error)
+	Update  func(ctx context.Context, data ...any) (any, error)
+	Delete  func(ctx context.Context, data ...any) (any, error)
 }
 
+type EncodeFunc func(input any, output any) error
+type DecodeFunc func(input any, output any) error
+
 // CrudP handles automatic handler processing
-// Uses slices instead of maps for TinyGo compatibility
 type CrudP struct {
-	config   *Config
+	encode   EncodeFunc
+	decode   DecodeFunc
 	handlers []actionHandler
-	codec    Codec
 	log      func(...any) // Never nil - uses no-op by default
-	broker   *broker      // Add this field
 }
 
 // noopLogger is the default logger that does nothing
 func noopLogger(...any) {}
 
-// New creates a new CrudP instance with configuration
-func New(cfg *Config) *CrudP {
-	if cfg == nil {
-		cfg = DefaultConfig()
-	}
-
-	codec := cfg.Codec
-	if codec == nil {
-		codec = getDefaultCodec()
-	}
-
+// New creates a new CrudP instance with mandatory serialization functions
+func New(encode EncodeFunc, decode DecodeFunc) *CrudP {
 	cp := &CrudP{
-		config: cfg,
-		codec:  codec,
+		encode: encode,
+		decode: decode,
 		log:    noopLogger,
 	}
-
-	// Initialize broker
-	cp.broker = newBroker(cfg, codec)
 
 	return cp
 }
 
-// NewDefault creates CrudP with default configuration
-func NewDefault() *CrudP {
-	return New(nil)
-}
-
-// SetLogger configures a custom logging function
-// Pass nil to restore no-op logger
-func (cp *CrudP) SetLogger(logger func(...any)) {
-	if logger == nil {
+// SetLog configures a custom logging function
+func (cp *CrudP) SetLog(log func(...any)) {
+	if log == nil {
 		cp.log = noopLogger
 		return
 	}
-	cp.log = logger
-}
-
-// DisableLogger disables logging
-func (cp *CrudP) DisableLogger() {
-	cp.log = noopLogger
-}
-
-// Config returns the current configuration (read-only)
-func (cp *CrudP) Config() *Config {
-	return cp.config
-}
-
-// Codec returns the current codec
-func (cp *CrudP) Codec() Codec {
-	return cp.codec
-}
-
-// SetCodec allows changing the codec at runtime
-func (cp *CrudP) SetCodec(codec Codec) {
-	if codec != nil {
-		cp.codec = codec
-	}
-}
-
-// Broker returns the broker for advanced configuration
-func (cp *CrudP) Broker() *broker {
-	return cp.broker
-}
-
-// EnqueuePacket queues a packet for batch sending
-func (cp *CrudP) EnqueuePacket(handlerID uint8, action byte, reqID string, data any) error {
-	encoded, err := cp.codec.Encode(data)
-	if err != nil {
-		return err
-	}
-	cp.broker.Enqueue(handlerID, action, reqID, encoded)
-	return nil
+	cp.log = log
 }

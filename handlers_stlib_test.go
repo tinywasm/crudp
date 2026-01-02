@@ -4,12 +4,10 @@ package crudp_test
 
 import (
 	"testing"
-
-	"github.com/cdvelop/crudp"
 )
 
 func TestHandlers_Stdlib(t *testing.T) {
-	cp := crudp.NewDefault()
+	cp := NewTestCrudP()
 
 	t.Run("Registration", func(t *testing.T) {
 		HandlerRegistrationShared(t, cp)

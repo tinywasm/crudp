@@ -2,31 +2,22 @@ package crudp
 
 import "context"
 
-// Response interface that handlers return for routing
-// Handlers return `any` which can be:
-// - A simple value for direct response
-// - []Response for multiple broadcast
-// - Individual Response for SSE routing
-type Response interface {
-	Response() (data any, broadcast []string, err error)
-}
-
 // Separate CRUD interfaces - handlers implement only what they need
-// Return `any` which internally can be Response or []Response for broadcast
+// Return `any` which internally can be slice for multiple items
 type Creator interface {
-	Create(ctx context.Context, data ...any) any
+	Create(ctx context.Context, data ...any) (any, error)
 }
 
 type Reader interface {
-	Read(ctx context.Context, data ...any) any
+	Read(ctx context.Context, data ...any) (any, error)
 }
 
 type Updater interface {
-	Update(ctx context.Context, data ...any) any
+	Update(ctx context.Context, data ...any) (any, error)
 }
 
 type Deleter interface {
-	Delete(ctx context.Context, data ...any) any
+	Delete(ctx context.Context, data ...any) (any, error)
 }
 
 // NamedHandler allows override of automatic name (optional)

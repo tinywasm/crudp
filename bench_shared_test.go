@@ -3,6 +3,8 @@ package crudp
 import (
 	"context"
 	"testing"
+
+	"github.com/tinywasm/binary"
 )
 
 // BenchUser is a simple structure for benchmarks
@@ -13,17 +15,17 @@ type BenchUser struct {
 	Age   uint8
 }
 
-func (u *BenchUser) Create(ctx context.Context, data ...any) any {
+func (u *BenchUser) Create(ctx context.Context, data ...any) (any, error) {
 	created := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
 		user.ID = 123
 		created = append(created, user)
 	}
-	return created
+	return created, nil
 }
 
-func (u *BenchUser) Read(ctx context.Context, data ...any) any {
+func (u *BenchUser) Read(ctx context.Context, data ...any) (any, error) {
 	results := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
@@ -34,29 +36,28 @@ func (u *BenchUser) Read(ctx context.Context, data ...any) any {
 			Age:   user.Age,
 		})
 	}
-	return results
+	return results, nil
 }
 
-func (u *BenchUser) Update(ctx context.Context, data ...any) any {
+func (u *BenchUser) Update(ctx context.Context, data ...any) (any, error) {
 	updated := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
 		user.Name = "Updated " + user.Name
 		updated = append(updated, user)
 	}
-	return updated
+	return updated, nil
 }
 
-func (u *BenchUser) Delete(ctx context.Context, data ...any) any {
-	return len(data) // Return count of deleted items
+func (u *BenchUser) Delete(ctx context.Context, data ...any) (any, error) {
+	return len(data), nil
 }
 
 // Global variables to prevent compiler optimizations
 var (
-	globalCrudP    *CrudP
-	globalPacket   []byte
-	globalResponse []byte
-	globalUser     = &BenchUser{
+	globalCrudP     *CrudP
+	globalBatchResp *BatchResponse
+	globalUser      = &BenchUser{
 		ID:    1,
 		Name:  "BenchUser",
 		Email: "bench@example.com",
@@ -64,7 +65,7 @@ var (
 	}
 )
 
-// BenchmarkCrudP_Setup measures allocations for CRUDP initialization
+// BenchmarkCrudPSetup measures allocations for CRUDP initialization
 func BenchmarkCrudPSetupShared(b *testing.B) {
 	var cp *CrudP
 
@@ -72,7 +73,7 @@ func BenchmarkCrudPSetupShared(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		cp = NewDefault()
+		cp = New(binary.Encode, binary.Decode)
 		if err := cp.RegisterHandler(&BenchUser{}); err != nil {
 			b.Fatalf("RegisterHandler failed: %v", err)
 		}
@@ -81,195 +82,33 @@ func BenchmarkCrudPSetupShared(b *testing.B) {
 	globalCrudP = cp // Prevent optimization
 }
 
-// BenchmarkCrudP_EncodePacket measures allocations for packet encoding
-func BenchmarkCrudPEncodePacketShared(b *testing.B) {
-	cp := NewDefault()
+// BenchmarkCrudPExecute measures allocations for executing a batch request
+func BenchmarkCrudPExecuteShared(b *testing.B) {
+	cp := New(binary.Encode, binary.Decode)
 	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
 		b.Fatalf("RegisterHandler failed: %v", err)
 	}
 
-	var packet []byte
+	var userData []byte
+	binary.Encode(globalUser, &userData)
+	req := &BatchRequest{
+		Packets: []Packet{
+			{Action: 'c', HandlerID: 0, ReqID: "bench", Data: [][]byte{userData}},
+		},
+	}
+
+	var resp *BatchResponse
 	var err error
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		packet, err = cp.EncodePacket('c', 0, "", globalUser)
+		resp, err = cp.Execute(context.Background(), req)
 		if err != nil {
-			b.Fatalf("EncodePacket failed: %v", err)
+			b.Fatalf("Execute failed: %v", err)
 		}
 	}
 
-	globalPacket = packet // Prevent optimization
-}
-
-// BenchmarkCrudP_ProcessPacket measures allocations for complete packet processing
-func BenchmarkCrudPProcessPacketShared(b *testing.B) {
-	cp := NewDefault()
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
-	}
-
-	// Pre-encode a packet to process
-	packet, err := cp.EncodePacket('c', 0, "", globalUser)
-	if err != nil {
-		b.Fatalf("Failed to create test packet: %v", err)
-	}
-
-	var response []byte
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		response, err = cp.ProcessPacket(context.Background(), packet)
-		if err != nil {
-			b.Fatalf("ProcessPacket failed: %v", err)
-		}
-	}
-
-	globalResponse = response // Prevent optimization
-}
-
-// BenchmarkCrudP_FullCycle measures allocations for complete encode->process->decode cycle
-func BenchmarkCrudPFullCycleShared(b *testing.B) {
-	cp := NewDefault()
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
-	}
-
-	var packet []byte
-	var response []byte
-	var responsePacket Packet
-	var err error
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		// Encode request
-		packet, err = cp.EncodePacket('c', 0, "", globalUser)
-		if err != nil {
-			b.Fatalf("EncodePacket failed: %v", err)
-		}
-
-		// Process request
-		response, err = cp.ProcessPacket(context.Background(), packet)
-		if err != nil {
-			b.Fatalf("ProcessPacket failed: %v", err)
-		}
-
-		// Decode response
-		err = cp.DecodePacket(response, &responsePacket)
-		if err != nil {
-			b.Fatalf("DecodePacket failed: %v", err)
-		}
-	}
-
-	globalResponse = response // Prevent optimization
-}
-
-// BenchmarkCrudP_MultipleUsers measures allocations with multiple users in one packet
-func BenchmarkCrudPMultipleUsersShared(b *testing.B) {
-	cp := NewDefault()
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
-	}
-
-	users := []*BenchUser{
-		{ID: 1, Name: "User1", Email: "user1@example.com", Age: 20},
-		{ID: 2, Name: "User2", Email: "user2@example.com", Age: 25},
-		{ID: 3, Name: "User3", Email: "user3@example.com", Age: 30},
-		{ID: 4, Name: "User4", Email: "user4@example.com", Age: 35},
-		{ID: 5, Name: "User5", Email: "user5@example.com", Age: 40},
-	}
-
-	var response []byte
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		// Create packet with multiple users
-		packet, err := cp.EncodePacket('c', 0, "", users[0], users[1], users[2], users[3], users[4])
-		if err != nil {
-			b.Fatalf("EncodePacket failed: %v", err)
-		}
-
-		// Process packet
-		response, err = cp.ProcessPacket(context.Background(), packet)
-		if err != nil {
-			b.Fatalf("ProcessPacket failed: %v", err)
-		}
-	}
-
-	globalResponse = response // Prevent optimization
-}
-
-// BenchmarkCrudP_AllOperations measures allocations for all CRUD operations
-func BenchmarkCrudPAllOperationsShared(b *testing.B) {
-	cp := NewDefault()
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
-	}
-
-	operations := []byte{'c', 'r', 'u', 'd'}
-	var response []byte
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		for _, op := range operations {
-			// Encode packet for each operation
-			packet, err := cp.EncodePacket(op, 0, "", globalUser)
-			if err != nil {
-				b.Fatalf("EncodePacket failed for operation %c: %v", op, err)
-			}
-
-			// Process packet
-			response, err = cp.ProcessPacket(context.Background(), packet)
-			if err != nil {
-				b.Fatalf("ProcessPacket failed for operation %c: %v", op, err)
-			}
-		}
-	}
-
-	globalResponse = response // Prevent optimization
-}
-
-// BenchmarkCrudP_LargePayload measures allocations with larger string data
-func BenchmarkCrudPLargePayloadShared(b *testing.B) {
-	cp := NewDefault()
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
-	}
-
-	// Create user with large strings
-	largeUser := &BenchUser{
-		ID:    1,
-		Name:  "This is a very long name that simulates real-world data with lots of characters and information that might be stored in a typical user profile",
-		Email: "very.long.email.address.that.simulates.real.world.usage@very.long.domain.name.example.com",
-		Age:   25,
-	}
-
-	var response []byte
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		packet, err := cp.EncodePacket('c', 0, "", largeUser)
-		if err != nil {
-			b.Fatalf("EncodePacket failed: %v", err)
-		}
-
-		response, err = cp.ProcessPacket(context.Background(), packet)
-		if err != nil {
-			b.Fatalf("ProcessPacket failed: %v", err)
-		}
-	}
-
-	globalResponse = response // Prevent optimization
+	globalBatchResp = resp // Prevent optimization
 }

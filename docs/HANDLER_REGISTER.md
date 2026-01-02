@@ -2,11 +2,11 @@
 
 ## Core Concepts
 
-Handlers are the core of a CRUDP application. They implement the business logic for your data models. Handlers are registered with a `CrudP` instance, which then dispatches incoming requests to the appropriate handler and method.
+Handlers are the core of a CRUDP application. They implement the business logic for your data models. Handlers are registered with a `CrudP` instance, which then dispatches incoming requests based on the `HandlerID` provided in the protocol packets.
 
 ## CRUD Interfaces
 
-Handlers implement one or more of the following interfaces to handle CRUD operations:
+Handlers implement one or more of the following interfaces. Each method returns two values: the result (which can be `nil`) and an `error`.
 
 **File: `interfaces.go`**
 ```go
@@ -16,40 +16,38 @@ import "context"
 
 // Creator handles create operations.
 type Creator interface {
-    Create(ctx context.Context, data ...any) any
+    Create(ctx context.Context, data ...any) (any, error)
 }
 
 // Reader handles read operations.
 type Reader interface {
-    Read(ctx context.Context, data ...any) any
+    Read(ctx context.Context, data ...any) (any, error)
 }
 
 // Updater handles update operations.
 type Updater interface {
-    Update(ctx context.Context, data ...any) any
+    Update(ctx context.Context, data ...any) (any, error)
 }
 
 // Deleter handles delete operations.
 type Deleter interface {
-    Delete(ctx context.Context, data ...any) any
+    Delete(ctx context.Context, data ...any) (any, error)
 }
 ```
 
 **Key Points:**
 
--   Each CRUD method now returns a single `any` value.
--   This `any` value can be a simple struct, a slice of structs, or a `Response` interface for more advanced scenarios like SSE broadcasting.
+-   **Return types**: Returning an explicit `error` allows CRUDP to automatically populate the `MessageType` (Error) and `Message` fields in the `PacketResult` sent back to the client.
+-   **Dynamic Results**: The first return value (`any`) can be a simple struct, a slice of structs (for multi-item responses), or primitive values.
 
 ## Handler Naming
 
-CRUDP automatically determines a handler's name, which is used to route requests. This can be done in two ways:
+CRUDP automatically determines a handler's name, which is used for internal registration and logging.
 
-1.  **By Convention (Reflection):** If a handler does not explicitly provide a name, CRUDP will use reflection to get the type name of the handler struct and convert it to `snake_case`. For example, a `UserHandler` struct will be named `"user_handler"`.
-2.  **Explicitly (NamedHandler):** A handler can implement the `NamedHandler` interface to provide a custom name.
+1.  **By Convention (Reflection):** Default behavior. Converts the struct type name to `snake_case`. (e.g., `UserHandler` -> `"user_handler"`).
+2.  **Explicitly (NamedHandler):** Implement this interface to override the automatic name.
 
-**File: `interfaces.go`**
 ```go
-// NamedHandler allows a handler to provide a custom name.
 type NamedHandler interface {
     HandlerName() string
 }
@@ -59,33 +57,29 @@ type NamedHandler interface {
 
 CRUDP provides two optional interfaces for data validation:
 
--   `Validator`: For validating the entire data payload before a CRUD operation is executed.
--   `FieldValidator`: For validating individual fields, often used for UI feedback.
+-   `Validator`: Called **automatically** by `CallHandler` or `Execute` before the action method. If it returns an error, the action is aborted.
+-   `FieldValidator`: For manual validation of individual fields (typically used by the UI).
 
-**File: `interfaces.go`**
 ```go
-// Validator validates the entire data payload.
 type Validator interface {
     Validate(action byte, data ...any) error
 }
 
-// FieldValidator validates a single field.
 type FieldValidator interface {
     ValidateField(fieldName string, value string) error
 }
 ```
 
-If a handler implements the `Validator` interface, its `Validate` method will be called before the corresponding CRUD method is executed.
-
 ## `RegisterHandler`
 
-The `RegisterHandler` method on the `CrudP` instance is used to register one or more handlers.
+Use this method to register your handler instances. Order matters: the index in the slice becomes the `HandlerID` used in the protocol.
 
 ```go
-func (cp *CrudP) RegisterHandler(handlers ...any) error
+cp := crudp.NewDefault()
+err := cp.RegisterHandler(&UserHandler{}, &ProductHandler{})
 ```
 
-During registration, CRUDP will:
-1.  Determine the handler's name.
-2.  Bind the handler's `Create`, `Read`, `Update`, and `Delete` methods.
-3.  Cache the handler for later use.
+During registration, CRUDP:
+1.  Resolves the handler's name.
+2.  Binds implemented CRUD methods into an internal table for zero-allocation dispatching.
+3.  Logs the registration details if a logger is configured.

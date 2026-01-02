@@ -1,12 +1,13 @@
 package router
 
 import (
-	"github.com/cdvelop/crudp"
-	"github.com/cdvelop/crudp/example/modules"
+	"github.com/tinywasm/binary"
+	"github.com/tinywasm/crudp"
+	"github.com/tinywasm/crudp/example/modules"
 )
 
 func NewRouter() *crudp.CrudP {
-	cp := crudp.NewDefault()
+	cp := crudp.New(binary.Encode, binary.Decode)
 
 	// Get handlers from modules
 	handlers := modules.Init()

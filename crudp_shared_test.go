@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cdvelop/crudp"
-	. "github.com/cdvelop/tinystring"
+	"github.com/tinywasm/crudp"
+	. "github.com/tinywasm/fmt"
 )
 
 type User struct {
@@ -14,40 +14,34 @@ type User struct {
 	Email string
 }
 
-func (u *User) Response() (any, []string, error) {
-	return u, nil, nil
-}
-
-func (u *User) Create(ctx context.Context, data ...any) any {
-	created := make([]crudp.Response, 0, len(data))
+func (u *User) Create(ctx context.Context, data ...any) (any, error) {
+	created := make([]*User, 0, len(data))
 	for _, item := range data {
-		// item is concrete type (User), cast directly
 		user := item.(*User)
 		user.ID = 123
 		created = append(created, user)
 	}
-	return created
+	return created, nil
 }
 
-func (u *User) Read(ctx context.Context, data ...any) any {
-	results := make([]crudp.Response, 0, len(data))
+func (u *User) Read(ctx context.Context, data ...any) (any, error) {
+	results := make([]*User, 0, len(data))
 	for _, item := range data {
-		// item is concrete type (User), cast directly
 		user := item.(*User)
 		results = append(results, &User{ID: user.ID, Name: "Found " + user.Name, Email: user.Email})
 	}
-	return results
+	return results, nil
 }
 
 func CrudPBasicFunctionalityShared(t *testing.T) {
 	// Initialize CRUDP with handlers
-	cp := crudp.NewDefault()
+	cp := NewTestCrudP()
 	if err := cp.RegisterHandler(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
 	// Test Create operation
-	userData, err := cp.Codec().Encode(&User{Name: "John", Email: "john@example.com"})
+	userData, err := testEncode(cp, &User{Name: "John", Email: "john@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to encode user data: %v", err)
 	}
@@ -59,20 +53,11 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 		Data:      [][]byte{userData},
 	}
 
-	batchReq := crudp.BatchRequest{Packets: []crudp.Packet{createPacket}}
-	batchBytes, err := cp.Codec().Encode(batchReq)
-	if err != nil {
-		t.Fatalf("Failed to encode batch request: %v", err)
-	}
+	batchReq := &crudp.BatchRequest{Packets: []crudp.Packet{createPacket}}
 
-	response, err := cp.ProcessBatch(context.Background(), batchBytes)
+	batchResp, err := cp.Execute(context.Background(), batchReq)
 	if err != nil {
-		t.Fatalf("Failed to process batch: %v", err)
-	}
-
-	var batchResp crudp.BatchResponse
-	if err := cp.Codec().Decode(response, &batchResp); err != nil {
-		t.Fatalf("Failed to decode batch response: %v", err)
+		t.Fatalf("Failed to execute batch: %v", err)
 	}
 
 	if len(batchResp.Results) != 1 {
@@ -88,13 +73,12 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 		t.Errorf("Expected success, got failure: %s", result.Message)
 	}
 
-	// Handler returns []Response, so each element in Data is a separate User object
 	if len(result.Data) != 1 {
 		t.Fatalf("Expected 1 data element, got %d", len(result.Data))
 	}
 
 	var createdUser User
-	if err := cp.Codec().Decode(result.Data[0], &createdUser); err != nil {
+	if err := testDecode(cp, result.Data[0], &createdUser); err != nil {
 		t.Fatalf("Failed to decode created user: %v", err)
 	}
 	if createdUser.ID != 123 {
@@ -102,7 +86,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	// Test Read operation
-	readUserData, err := cp.Codec().Encode(&User{ID: 123, Name: "John"})
+	readUserData, err := testEncode(cp, &User{ID: 123, Name: "John"})
 	if err != nil {
 		t.Fatalf("Failed to encode read user data: %v", err)
 	}
@@ -114,20 +98,11 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 		Data:      [][]byte{readUserData},
 	}
 
-	batchReq2 := crudp.BatchRequest{Packets: []crudp.Packet{readPacket}}
-	batchBytes2, err := cp.Codec().Encode(batchReq2)
-	if err != nil {
-		t.Fatalf("Failed to encode batch request 2: %v", err)
-	}
+	batchReq2 := &crudp.BatchRequest{Packets: []crudp.Packet{readPacket}}
 
-	response2, err := cp.ProcessBatch(context.Background(), batchBytes2)
+	batchResp2, err := cp.Execute(context.Background(), batchReq2)
 	if err != nil {
-		t.Fatalf("Failed to process read batch: %v", err)
-	}
-
-	var batchResp2 crudp.BatchResponse
-	if err := cp.Codec().Decode(response2, &batchResp2); err != nil {
-		t.Fatalf("Failed to decode batch response 2: %v", err)
+		t.Fatalf("Failed to execute read batch: %v", err)
 	}
 
 	if len(batchResp2.Results) != 1 {
@@ -143,16 +118,53 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 		t.Errorf("Expected success, got failure: %s", result2.Message)
 	}
 
-	// Handler returns []Response, so each element in Data is a separate User object
 	if len(result2.Data) != 1 {
 		t.Fatalf("Expected 1 data element, got %d", len(result2.Data))
 	}
 
 	var readUser User
-	if err := cp.Codec().Decode(result2.Data[0], &readUser); err != nil {
+	if err := testDecode(cp, result2.Data[0], &readUser); err != nil {
 		t.Fatalf("Failed to decode read user: %v", err)
 	}
 	if readUser.Name != "Found John" {
 		t.Errorf("Expected read user name 'Found John', got '%s'", readUser.Name)
 	}
+}
+
+func LoggerConfigShared(t *testing.T) {
+	t.Run("Logger Disabled By Default", func(t *testing.T) {
+		cp := NewTestCrudP()
+		cp.SetLog(nil)
+	})
+
+	t.Run("SetLog Custom", func(t *testing.T) {
+		cp := NewTestCrudP()
+
+		var logged []any
+		cp.SetLog(func(args ...any) {
+			logged = append(logged, args...)
+		})
+
+		// Register handler to trigger log
+		err := cp.RegisterHandler(&testLogHandler{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(logged) == 0 {
+			t.Error("expected log output")
+		}
+	})
+
+	t.Run("SetLog Nil Restores NoOp", func(t *testing.T) {
+		cp := NewTestCrudP()
+		cp.SetLog(func(args ...any) {})
+		cp.SetLog(nil)
+	})
+}
+
+type testLogHandler struct{}
+
+func (h *testLogHandler) Create(ctx context.Context, data ...any) (any, error) {
+	return "ok", nil
 }

@@ -6,6 +6,12 @@ import (
 	"testing"
 )
 
-func TestCrudP_BasicFunctionality(t *testing.T) {
-	CrudPBasicFunctionalityShared(t)
+func TestCrudP_Stdlib(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		CrudPBasicFunctionalityShared(t)
+	})
+
+	t.Run("Logger", func(t *testing.T) {
+		LoggerConfigShared(t)
+	})
 }

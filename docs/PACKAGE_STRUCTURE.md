@@ -1,36 +1,21 @@
-# Estructura de Paquetes (TinyGo Friendly)
+# Package Structure
 
-Mantenemos la eficiencia binaria, pero envolvemos todo en un concepto de `Envelope` (Sobre) para lotes.
+CRUDP is designed for maximum efficiency in both standard Go and TinyGo (WASM).
 
-**Cambios Clave:**
+## Main Components
 
-1.  **`ReqID` (Correlation ID):** Esencial para asincronía. El cliente genera un ID (UnixID) y el servidor *debe* devolverlo en la respuesta SSE para que el cliente sepa qué solicitud se completó.
-2.  **Batch Wrapper:** Todo envío es un array de paquetes.
+| File | Responsibility |
+|------|----------------|
+| `crudp.go` | Core `CrudP` struct, initialization (mandatory serialization), and logger management. |
+| `handlers.go` | Handler registration, name resolution (reflection), and method binding. |
+| `interfaces.go` | Definition of CRUD, Validation, and Naming interfaces. |
+| `packet.go` | Protocol data structures (`Packet`, `BatchRequest`, `BatchResponse`). |
+| `actions.go` | Helper functions to map HTTP methods to CRUD actions (`c`, `r`, `u`, `d`). |
+| `execute.go` | Main execution engine for `BatchRequest`. |
+| `http_stlib.go` | Standard library HTTP integration and custom routes/middleware hooks. |
 
-```go
-// crudp/packet.go
+## Related Documentation
 
-type Packet struct {
-    Action    byte     // 'c', 'r', 'u', 'd'
-    HandlerID uint8    // Índice en la tabla de handlers compartida
-    ReqID     string   // ID único generado por el cliente (ej. UnixID)
-    Data      [][]byte // Argumentos serializados
-}
-
-// BatchRequest es lo que se envía en el POST /sync
-type BatchRequest struct {
-    Packets []Packet
-}
-
-// BatchResponse es lo que se recibe por SSE
-type BatchResponse struct {
-    Results []PacketResult
-}
-
-type PacketResult struct {
-    ReqID   string // Correlación con la petición original
-    Success bool   // true/false
-    Message string // Error o mensaje de éxito
-    Data    []byte // Resultado codificado (si aplica)
-}
-```
+- [ARCHITECTURE.md](ARCHITECTURE.md) - High-level design.
+- [INITIALIZATION.md](INITIALIZATION.md) - How to initialize and configure serialization.
+- [HANDLER_REGISTER.md](HANDLER_REGISTER.md) - How to implement modules.
