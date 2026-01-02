@@ -12,26 +12,20 @@ type actionHandler struct {
 	Delete  func(ctx context.Context, data ...any) (any, error)
 }
 
-type EncodeFunc func(input any, output any) error
-type DecodeFunc func(input any, output any) error
-
 // CrudP handles automatic handler processing
 type CrudP struct {
-	encode   EncodeFunc
-	decode   DecodeFunc
+	encode   func(input any, output any) error
+	decode   func(input any, output any) error
 	handlers []actionHandler
 	log      func(...any) // Never nil - uses no-op by default
 }
 
-// noopLogger is the default logger that does nothing
-func noopLogger(...any) {}
-
 // New creates a new CrudP instance with mandatory serialization functions
-func New(encode EncodeFunc, decode DecodeFunc) *CrudP {
+func New(encode, decode func(any, any) error) *CrudP {
 	cp := &CrudP{
 		encode: encode,
 		decode: decode,
-		log:    noopLogger,
+		log:    func(...any) {},
 	}
 
 	return cp
@@ -40,7 +34,7 @@ func New(encode EncodeFunc, decode DecodeFunc) *CrudP {
 // SetLog configures a custom logging function
 func (cp *CrudP) SetLog(log func(...any)) {
 	if log == nil {
-		cp.log = noopLogger
+		cp.log = func(...any) {}
 		return
 	}
 	cp.log = log

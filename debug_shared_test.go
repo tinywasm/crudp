@@ -15,7 +15,7 @@ func HandlerInstanceReuseShared(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		name := "User " + string(rune('A'+i))
-		userData, _ := testEncode(cp, &User{Name: name})
+		userData, _ := testEncode(&User{Name: name})
 
 		req := &crudp.BatchRequest{
 			Packets: []crudp.Packet{
@@ -29,7 +29,7 @@ func HandlerInstanceReuseShared(t *testing.T) {
 		}
 
 		var result User
-		testDecode(cp, resp.Results[0].Data[0], &result)
+		testDecode(resp.Results[0].Data[0], &result)
 
 		if result.Name != name {
 			t.Errorf("Iteration %d: expected name %s, got %s", i, name, result.Name)
@@ -46,7 +46,7 @@ func ConcurrentHandlerAccessShared(t *testing.T) {
 	names := []string{"Alice", "Bob", "Charlie", "Dave"}
 
 	for _, name := range names {
-		userData, _ := testEncode(cp, &User{Name: name})
+		userData, _ := testEncode(&User{Name: name})
 		req := &crudp.BatchRequest{
 			Packets: []crudp.Packet{
 				{Action: 'c', HandlerID: 0, Data: [][]byte{userData}},
@@ -59,7 +59,7 @@ func ConcurrentHandlerAccessShared(t *testing.T) {
 		}
 
 		var result User
-		testDecode(cp, resp.Results[0].Data[0], &result)
+		testDecode(resp.Results[0].Data[0], &result)
 
 		if result.Name != name {
 			t.Errorf("Expected %s, got %s", name, result.Name)

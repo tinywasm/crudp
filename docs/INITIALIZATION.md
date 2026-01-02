@@ -26,14 +26,12 @@ func NewRouter() *crudp.CrudP {
 
 ## Constructors
 
-### `New(encode EncodeFunc, decode DecodeFunc)`
+### `New(encode, decode func(any, any) error)`
 
-The primary constructor for `CrudP`. Both parameters are mandatory to ensure that the execution engine can process packet data.
+The primary constructor for `CrudP`. Both parameters are mandatory to ensure that the execution engine can process packet data. 
 
-```go
-type EncodeFunc func(input any, output any) error
-type DecodeFunc func(input any, output any) error
-```
+- **encode**: Typically receives a Go struct as `input` and a `*[]byte` as `output`.
+- **decode**: Typically receives a `[]byte` as `input` and a pointer to a Go struct as `output`.
 
 ## Other Settings (Methods)
 

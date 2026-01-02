@@ -75,7 +75,7 @@ type FieldValidator interface {
 Use this method to register your handler instances. Order matters: the index in the slice becomes the `HandlerID` used in the protocol.
 
 ```go
-cp := crudp.NewDefault()
+cp := crudp.New(binary.Encode, binary.Decode)
 err := cp.RegisterHandler(&UserHandler{}, &ProductHandler{})
 ```
 

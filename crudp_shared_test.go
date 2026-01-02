@@ -41,7 +41,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	// Test Create operation
-	userData, err := testEncode(cp, &User{Name: "John", Email: "john@example.com"})
+	userData, err := testEncode(&User{Name: "John", Email: "john@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to encode user data: %v", err)
 	}
@@ -78,7 +78,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	var createdUser User
-	if err := testDecode(cp, result.Data[0], &createdUser); err != nil {
+	if err := testDecode(result.Data[0], &createdUser); err != nil {
 		t.Fatalf("Failed to decode created user: %v", err)
 	}
 	if createdUser.ID != 123 {
@@ -86,7 +86,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	// Test Read operation
-	readUserData, err := testEncode(cp, &User{ID: 123, Name: "John"})
+	readUserData, err := testEncode(&User{ID: 123, Name: "John"})
 	if err != nil {
 		t.Fatalf("Failed to encode read user data: %v", err)
 	}
@@ -123,7 +123,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	var readUser User
-	if err := testDecode(cp, result2.Data[0], &readUser); err != nil {
+	if err := testDecode(result2.Data[0], &readUser); err != nil {
 		t.Fatalf("Failed to decode read user: %v", err)
 	}
 	if readUser.Name != "Found John" {
