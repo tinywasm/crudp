@@ -7,8 +7,12 @@ import (
 )
 
 func main() {
-	// Get CRUDP client for WASM
-	_ = router.NewRouter() // TODO: Implement WASM client logic
+	// Initialize CRUDP router
+	cp := router.NewRouter()
 
+	// Connect fetch responses to CRUDP handlers
+	cp.InitClient()
+
+	// Keep WASM running
 	select {}
 }

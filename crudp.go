@@ -1,5 +1,9 @@
 package crudp
 
+import (
+	"github.com/tinywasm/binary"
+)
+
 type actionHandler struct {
 	name    string
 	index   uint8
@@ -18,7 +22,7 @@ type CrudP struct {
 	log      func(...any) // Never nil - uses no-op by default
 }
 
-// New creates a new CrudP instance with mandatory serialization functions
+// New creates a new CrudP instance with custom serialization functions
 func New(encode, decode func(any, any) error) *CrudP {
 	cp := &CrudP{
 		encode: encode,
@@ -27,6 +31,11 @@ func New(encode, decode func(any, any) error) *CrudP {
 	}
 
 	return cp
+}
+
+// NewDefault creates a CrudP instance using the recommended binary codec
+func NewDefault() *CrudP {
+	return New(binary.Encode, binary.Decode)
 }
 
 // SetLog configures a custom logging function

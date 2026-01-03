@@ -39,6 +39,7 @@ cp.RegisterHandler(&UserHandler{})
 
 ## Documentation
 
+- [`docs/INITIAL_VISION.md`](docs/INITIAL_VISION.md): Vision and design principles
 - [`docs/HANDLER_REGISTER.md`](docs/HANDLER_REGISTER.md): Handler interfaces and registration
 - [`docs/PACKET_STRUCTURE.md`](docs/PACKET_STRUCTURE.md): Protocol packet structures
 

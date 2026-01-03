@@ -1,45 +1,67 @@
-# Initial Vision of the CRUDP Protocol
+# Vision of the CRUDP Protocol
 
 ## Introduction
 
-CRUDP is the core that registers and manages handlers for CRUD operations. Instead of limited manual registration, CRUDP provides a centralized API for modules to register their handlers dynamically.
+CRUDP is a protocol for isomorphic Go applications where **everything is CRUD**. It provides centralized handler registration and automatic HTTP endpoint generation for both client (WASM) and server.
 
-CRUDP simplifies the creation of typed APIs, allowing both the client (`client.go`) and server (`server.go`) to know the handlers for consistency. Handlers can process batches of requests.
+## Core Principles
 
-## Current Problem
+### 1. Everything is CRUD
 
-Currently, traditional APIs process one request at a time, which limits efficiency in offline-first scenarios. For example, in the frontend (using Go WebAssembly/TinyGo), if there's a connection failure, the user can continue working and storing objects locally. When the connection returns, I need to send multiple operations in a single request to synchronize everything.
+All operations map to Create, Read, Update, or Delete. File uploads, webhooks, exports—they're all CRUD operations with access to `*http.Request` when needed.
 
-Previously, I used WebSockets with an internal local queue, but now I need it to be public and scalable. That's why I thought of using Server-Sent Events (SSE): each request is processed asynchronously, stored in a queue, and as they are processed, responses are sent using CRUDP on both frontend and backend. This makes the code reusable and testable.
+### 2. Automatic Endpoints
 
-## Proposed Solution
+When you register a handler, CRUDP generates HTTP routes automatically:
 
-### Core Architecture
+| Action | HTTP Method | Route Pattern |
+|--------|-------------|---------------|
+| Create | `POST` | `/{handler_name}/{path...}` |
+| Read   | `GET` | `/{handler_name}/{path...}` |
+| Update | `PUT` | `/{handler_name}/{path...}` |
+| Delete | `DELETE` | `/{handler_name}/{path...}` |
 
-The radical change here is that the `Handler` no longer touches HTTP. The Router acts as a "translator" that extracts context from HTTP (Auth, UserID) and passes it to the Handler in an agnostic way.
+No manual route configuration needed.
 
-- **Centralized Registration in CRUDP:** CRUDP provides the API to register handlers dynamically from modules, without direct coupling to HTTP.
+### 3. Simplified Return Type
 
-- **Batch Processing:** Handlers receive N requests in a single call, optimizing performance.
+Handlers return `any` which can be:
+- A result (struct, slice, primitive)
+- An `error` (detected automatically by the server)
 
-- **Asynchrony with SSE:** Asynchronous notifications for results, using correlation IDs.
+```go
+func (h *Handler) Create(data ...any) any {
+    // Return result or error
+}
+```
 
-- **Efficient Binary Protocol:** Typed communication reusable on client and server.
+### 4. Request Injection
 
-### Clean Architecture with Context
+Server-side handlers receive `*http.Request` in the `data` slice, enabling:
+- Multipart form parsing for file uploads
+- Header access for webhook signature verification
+- Any HTTP-specific logic without custom routes
 
-To achieve clean architecture, the business **Handler** should not know that a package called `crudp` exists, nor should it depend on proprietary transport structures. We use Go's standard `context.Context` to pass necessary information like UserID and cancellation signals.
-
-See [interfaces.go](../interfaces.go) for the complete interface definitions.
-
+```go
+func (h *Handler) Create(data ...any) any {
+    for _, item := range data {
+        if r, ok := item.(*http.Request); ok {
+            // Access headers, parse multipart, etc.
+        }
+    }
+}
+```
 
 ## Protocol Requirements
 
-- Must be TinyGo-friendly (resource-efficient).
+- TinyGo-friendly (minimal binary size)
+- Batch operations via `/batch` endpoint
+- Correlation IDs for async response tracking
+- Transport decoupling (handlers don't import `net/http`)
 
-- Support for batch operations.
+## Related Documentation
 
-- Correlation IDs to track asynchronous responses.
-
-- Transport decoupling (no direct dependency on HTTP in handlers).
-
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture
+- [HANDLER_REGISTER.md](HANDLER_REGISTER.md) - Handler interfaces
+- [FILE_UPLOAD.md](FILE_UPLOAD.md) - File upload pattern
+- [WEBHOOKS.md](WEBHOOKS.md) - Webhook handling
