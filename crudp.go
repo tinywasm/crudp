@@ -4,10 +4,10 @@ type actionHandler struct {
 	name    string
 	index   uint8
 	handler any
-	Create  func(data ...any) (any, error)
-	Read    func(data ...any) (any, error)
-	Update  func(data ...any) (any, error)
-	Delete  func(data ...any) (any, error)
+	Create  func(data ...any) any
+	Read    func(data ...any) any
+	Update  func(data ...any) any
+	Delete  func(data ...any) any
 }
 
 // CrudP handles automatic handler processing

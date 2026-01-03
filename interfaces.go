@@ -3,19 +3,19 @@ package crudp
 // Separate CRUD interfaces - handlers implement only what they need
 // Return `any` which internally can be slice for multiple items
 type Creator interface {
-	Create(data ...any) (any, error)
+	Create(data ...any) any
 }
 
 type Reader interface {
-	Read(data ...any) (any, error)
+	Read(data ...any) any
 }
 
 type Updater interface {
-	Update(data ...any) (any, error)
+	Update(data ...any) any
 }
 
 type Deleter interface {
-	Delete(data ...any) (any, error)
+	Delete(data ...any) any
 }
 
 // NamedHandler allows override of automatic name (optional)

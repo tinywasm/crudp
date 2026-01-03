@@ -14,8 +14,8 @@ type ExplicitCreateResponse struct {
 }
 
 func (h *explicitNameHandler) HandlerName() string { return "my_custom_name" }
-func (h *explicitNameHandler) Create(data ...any) (any, error) {
-	return ExplicitCreateResponse{Message: "created"}, nil
+func (h *explicitNameHandler) Create(data ...any) any {
+	return ExplicitCreateResponse{Message: "created"}
 }
 
 // Test handler without explicit name (uses reflection)
@@ -31,12 +31,12 @@ type ReadResponse struct {
 	Name string `json:"name"`
 }
 
-func (h *UserController) Create(data ...any) (any, error) {
-	return CreateResponse{ID: 1, Status: "created"}, nil
+func (h *UserController) Create(data ...any) any {
+	return CreateResponse{ID: 1, Status: "created"}
 }
 
-func (h *UserController) Read(data ...any) (any, error) {
-	return ReadResponse{ID: 1, Name: "test"}, nil
+func (h *UserController) Read(data ...any) any {
+	return ReadResponse{ID: 1, Name: "test"}
 }
 
 // Handler with validation
@@ -46,8 +46,8 @@ type ValidatedCreateResponse struct {
 	Message string `json:"message"`
 }
 
-func (h *ValidatedHandler) Create(data ...any) (any, error) {
-	return ValidatedCreateResponse{Message: "validated_created"}, nil
+func (h *ValidatedHandler) Create(data ...any) any {
+	return ValidatedCreateResponse{Message: "validated_created"}
 }
 
 func (h *ValidatedHandler) Validate(action byte, data ...any) error {

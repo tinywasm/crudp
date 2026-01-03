@@ -14,17 +14,17 @@ type BenchUser struct {
 	Age   uint8
 }
 
-func (u *BenchUser) Create(data ...any) (any, error) {
+func (u *BenchUser) Create(data ...any) any {
 	created := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
 		user.ID = 123
 		created = append(created, user)
 	}
-	return created, nil
+	return created
 }
 
-func (u *BenchUser) Read(data ...any) (any, error) {
+func (u *BenchUser) Read(data ...any) any {
 	results := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
@@ -35,21 +35,21 @@ func (u *BenchUser) Read(data ...any) (any, error) {
 			Age:   user.Age,
 		})
 	}
-	return results, nil
+	return results
 }
 
-func (u *BenchUser) Update(data ...any) (any, error) {
+func (u *BenchUser) Update(data ...any) any {
 	updated := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
 		user.Name = "Updated " + user.Name
 		updated = append(updated, user)
 	}
-	return updated, nil
+	return updated
 }
 
-func (u *BenchUser) Delete(data ...any) (any, error) {
-	return len(data), nil
+func (u *BenchUser) Delete(data ...any) any {
+	return len(data)
 }
 
 // Global variables to prevent compiler optimizations

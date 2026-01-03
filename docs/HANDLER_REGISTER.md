@@ -14,42 +14,45 @@ package crudp
 
 // Creator handles create operations.
 type Creator interface {
-    Create(data ...any) (any, error)
+    Create(data ...any) any
 }
 
 // Reader handles read operations.
 type Reader interface {
-    Read(data ...any) (any, error)
+    Read(data ...any) any
 }
 
 // Updater handles update operations.
 type Updater interface {
-    Update(data ...any) (any, error)
+    Update(data ...any) any
 }
 
 // Deleter handles delete operations.
 type Deleter interface {
-    Delete(data ...any) (any, error)
+    Delete(data ...any) any
 }
 ```
 
 **Key Points:**
 
--   **Return types**: Returning an explicit `error` allows CRUDP to automatically populate the `MessageType` (Error) and `Message` fields in the `PacketResult` sent back to the client.
--   **Dynamic Results**: The first return value (`any`) can be a simple struct, a slice of structs (for multi-item responses), or primitive values.
+-   **Return types**: Returning an `error` object (e.g. `return errorString("failed")`) allows CRUDP to automatically populate the `MessageType` (Error) and `Message` fields. WASM handlers typically return `nil` if they only update the DOM.
+-   **Dynamic Results**: The return value (`any`) can be a simple struct, a slice of structs, primitive values, or an `error`.
 
 ## Processing Data with For Loop
 
 Handlers receive injected values (context, http.Request) plus user data in the `data` slice. Always iterate with a type switch:
 
 ```go
-func (h *UserHandler) Create(data ...any) (any, error) {
+func (h *UserHandler) Create(data ...any) any {
     var ctx *context.Context
     var req *http.Request  // Only present on server
+    var id  string         // From URL /users/{id}
     var users []*User
 
     for _, item := range data {
         switch v := item.(type) {
+        case string:
+            id = v    // Captured from URL path
         case *context.Context:
             ctx = v
         case *http.Request:
@@ -59,8 +62,8 @@ func (h *UserHandler) Create(data ...any) (any, error) {
         }
     }
 
-    // Now use ctx, req (if present), and users
-    return processedUsers, nil
+    // Now use ctx, req (if present), id, and users
+    return processedUsers
 }
 ```
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/tinywasm/context"
+	. "github.com/tinywasm/fmt"
 )
 
 // HttpRouteProvider allows handlers to register custom HTTP routes
@@ -19,13 +20,29 @@ type MiddlewareProvider interface {
 	Middleware(next http.Handler) http.Handler
 }
 
-// RegisterRoutes registers the default CRUD API endpoint and any custom routes from handlers
+// RegisterRoutes registers endpoints for each handler and a global /batch endpoint
 func (cp *CrudP) RegisterRoutes(mux *http.ServeMux) {
-	// 1. Register default API endpoint
-	mux.HandleFunc("/api", cp.handleBatch)
+	// 1. Register global batch endpoint
+	mux.HandleFunc("POST /batch", cp.handleBatch)
 
-	// 2. Let handlers register their custom HTTP routes
+	// 2. Generate automatic routes for each handler
 	for _, h := range cp.handlers {
+		name := h.name
+
+		if h.Create != nil {
+			mux.HandleFunc("POST /"+name+"/{path...}", cp.makeHandler(h, 'c'))
+		}
+		if h.Read != nil {
+			mux.HandleFunc("GET /"+name+"/{path...}", cp.makeHandler(h, 'r'))
+		}
+		if h.Update != nil {
+			mux.HandleFunc("PUT /"+name+"/{path...}", cp.makeHandler(h, 'u'))
+		}
+		if h.Delete != nil {
+			mux.HandleFunc("DELETE /"+name+"/{path...}", cp.makeHandler(h, 'd'))
+		}
+
+		// Let handlers register additional custom HTTP routes if they want
 		if routeProvider, ok := h.handler.(HttpRouteProvider); ok {
 			routeProvider.RegisterRoutes(mux)
 		}
@@ -88,4 +105,93 @@ func (cp *CrudP) handleBatch(w http.ResponseWriter, r *http.Request) {
 	// NOTE: Content-Type depends on codec, but defaulting to JSON is common
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(encoded)
+}
+
+func (cp *CrudP) makeHandler(h actionHandler, action byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := r.PathValue("path")
+		cp.handleSingle(w, r, h, action, path)
+	}
+}
+
+func (cp *CrudP) handleSingle(w http.ResponseWriter, r *http.Request, h actionHandler, action byte, path string) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading body", http.StatusBadRequest)
+		return
+	}
+
+	var req Request
+	if len(body) > 0 {
+		if cp.decode == nil {
+			http.Error(w, "decode function not configured", http.StatusInternalServerError)
+			return
+		}
+		if err := cp.decode(body, &req); err != nil {
+			http.Error(w, "Error decoding request", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Prepare data for handler
+	decodedData, err := cp.decodeWithKnownType(&Packet{Data: req.Data}, h.index)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Prepend path (as string) and other injectables (context, request)
+	ctx := context.TODO()
+	inject := []any{ctx, r}
+	if path != "" {
+		inject = append(inject, path)
+	}
+	allData := append(inject, decodedData...)
+
+	// Call handler directly via CallHandler (which handles the error detection logic we added)
+	result, err := cp.CallHandler(h.index, action, allData...)
+
+	resp := Response{
+		ReqID: req.ReqID,
+	}
+
+	if err != nil {
+		resp.MessageType = uint8(Msg.Error)
+		resp.Message = err.Error()
+	} else {
+		resp.MessageType = uint8(Msg.Success)
+		resp.Message = "OK"
+
+		// Encode results
+		if result != nil {
+			pr := PacketResult{}
+			if err := cp.encodeResult(&pr, result); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			resp.Data = pr.Data
+		}
+	}
+
+	if cp.encode == nil {
+		http.Error(w, "encode function not configured", http.StatusInternalServerError)
+		return
+	}
+
+	encoded, err := cp.encodeBody(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(encoded)
+}
+
+func (cp *CrudP) encodeBody(data any) ([]byte, error) {
+	var encoded []byte
+	if err := cp.encode(data, &encoded); err != nil {
+		return nil, err
+	}
+	return encoded, nil
 }

@@ -39,12 +39,15 @@ import (
 type Handler struct{}
 
 // Implement CRUDP interfaces - iterate data with type switch
-func (h *Handler) Create(data ...any) (any, error) {
+func (h *Handler) Create(data ...any) any {
     var ctx *context.Context
+    var id  string
     var users []*User
 
     for _, item := range data {
         switch v := item.(type) {
+        case string:
+            id = v
         case *context.Context:
             ctx = v
         case *http.Request:
@@ -56,7 +59,8 @@ func (h *Handler) Create(data ...any) (any, error) {
 
     // Process users with context available
     _ = ctx
-    return "user created", nil
+    _ = id
+    return "user created"
 }
 ```
 
@@ -117,7 +121,7 @@ func main() {
     cp := router.NewRouter()
     
     mux := http.NewServeMux()
-    // Registers POST /api endpoint
+    // Registers POST /batch and automatic endpoints (e.g., POST /users)
     cp.RegisterRoutes(mux)
     
     http.ListenAndServe(":8080", mux)
@@ -135,21 +139,17 @@ On the client side, use `tinywasm/broker` to batch operations.
 package main
 
 import (
-    "github.com/tinywasm/broker"
     "myProject/pkg/router"
 )
 
 func main() {
     cp := router.NewRouter()
     
-    // Create a broker to batch outgoing requests
-    b := broker.New(50) // 50ms batch window
+    // Configure global fetch handler to route responses into CRUDP handlers
+    cp.InitClient()
     
-    b.SetOnFlush(func(items []broker.Item) {
-        // Encode items using BatchRequest and send via fetch
-    })
-    
-    // Add logic to enqueue operations...
+    // Application continues...
+    select {}
 }
 ```
 

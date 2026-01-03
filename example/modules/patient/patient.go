@@ -8,12 +8,12 @@ type Patient struct {
 	Age  int
 }
 
-func (h *Handler) Create(data ...any) (any, error) {
+func (h *Handler) Create(data ...any) any {
 	// Specific implementation for patients
-	return nil, nil
+	return nil
 }
 
-func (h *Handler) Read(data ...any) (any, error) {
+func (h *Handler) Read(data ...any) any {
 	// Specific implementation for patients
-	return nil, nil
+	return nil
 }

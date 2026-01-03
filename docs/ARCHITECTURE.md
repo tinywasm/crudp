@@ -11,8 +11,8 @@ CRUDP (CRUD Protocol) is a logic-only execution engine for isomorphic Go applica
 
 1. **Isomorphic Handlers:** Same handler code runs on frontend (WASM) and backend (Server).
 2. **Zero Transport Coupling:** CRUDP doesn't know about HTTP, WebSockets, or SSE.
-3. **Explicit Error Handling:** CRUD methods return `(any, error)` for reliable flow control.
-4. **Protocol Agnostic:** Works with any data structure defined in `tinywasm/packet`.
+3. **Simplified API:** CRUD methods return `any` (which can be an error) for minimal binary size.
+4. **Automatic Endpoints:** Native HTTP routing based on handler name and action.
 5. **TinyGo Compatible:** Optimized for small WASM binaries.
 
 ## Modular Architecture
@@ -46,7 +46,7 @@ flowchart TD
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Serialization | `Encode`/`Decode` funcs | Support JSON (tinywasm/json) or Binary (tinywasm/binary) formats |
-| Handler signature | `func(data ...any) (any, error)` | Explicit errors allow better client-side feedback |
+| Handler signature | `func(data ...any) any` | Simplifies API and reduces binary size |
 | Packet structure | Internal to `crudp` | Unified protocol definition and execution |
 | Batching | Delegated to `tinywasm/broker` | Keep CRUDP core simple and focused on execution |
 | Message types | `0-4` (uint8) | Normal, Info, Error, Warning, Success from `tinywasm/fmt` |
@@ -58,17 +58,18 @@ flowchart TD
 ```
 crudp
 ├── github.com/tinywasm/binary # Recommended codec
-└── github.com/tinywasm/fmt    # String conversion and message types
+├── github.com/tinywasm/fmt    # String conversion and message types
+└── github.com/tinywasm/fetch  # Client-side transport (WASM)
 ```
 
 ## Key Interfaces
 
 ```go
-// CRUD interfaces - return (any, error)
-type Creator interface { Create(data ...any) (any, error) }
-type Reader interface  { Read(data ...any) (any, error) }
-type Updater interface { Update(data ...any) (any, error) }
-type Deleter interface { Delete(data ...any) (any, error) }
+// CRUD interfaces - return any (result or error)
+type Creator interface { Create(data ...any) any }
+type Reader interface  { Read(data ...any) any }
+type Updater interface { Update(data ...any) any }
+type Deleter interface { Delete(data ...any) any }
 
 // Optional interfaces
 type NamedHandler interface { HandlerName() string }

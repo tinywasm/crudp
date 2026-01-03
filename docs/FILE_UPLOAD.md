@@ -29,12 +29,12 @@ type Handler struct {
     // Database or storage service
 }
 
-func (h *Handler) Create(data ...any) (any, error) {
+func (h *Handler) Create(data ...any) any {
     for _, item := range data {
         ref := item.(*FileReference)
         // Logic: Save file metadata to database
     }
-    return "metadata saved", nil
+    return "metadata saved"
 }
 ```
 

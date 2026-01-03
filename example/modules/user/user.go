@@ -8,21 +8,21 @@ type User struct {
 	Email string
 }
 
-func (h *Handler) Create(data ...any) (any, error) {
+func (h *Handler) Create(data ...any) any {
 	created := make([]*User, 0, len(data))
 	for _, item := range data {
 		user := item.(*User)
 		user.ID = 123
 		created = append(created, user)
 	}
-	return created, nil
+	return created
 }
 
-func (h *Handler) Read(data ...any) (any, error) {
+func (h *Handler) Read(data ...any) any {
 	results := make([]*User, 0, len(data))
 	for _, item := range data {
 		user := item.(*User)
 		results = append(results, &User{ID: user.ID, Name: "Found " + user.Name, Email: user.Email})
 	}
-	return results, nil
+	return results
 }

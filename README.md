@@ -7,11 +7,11 @@ A JSON/binary CRUD protocol for isomorphic Go applications. Limits its responsib
 
 ## Features
 
-- **Isomorphic:** Same handler code on frontend (WASM) and backend (Server)
+- **Isomorphic:** Same handler code on frontend (WASM) and backend (Server).
+- **Automatic Endpoints:** Generates HTTP routes (GET /users/{id}, POST /users) automatically.
 - **Protocol Agnostic:** Decoupled from HTTP, SSE or any transport layer.
 - **Batch Processing:** Logic to execute multiple operations from a single request.
 - **TinyGo Compatible:** Optimized for small WASM binaries.
-- **Explicit Error Handling:** CRUD methods return explicit errors for better flow control.
 
 ## Quick Start
 
@@ -20,9 +20,9 @@ A JSON/binary CRUD protocol for isomorphic Go applications. Limits its responsib
 ```go
 type UserHandler struct{}
 
-func (h *UserHandler) Create(data ...any) (any, error) {
-    // Process data and return result or error
-    return &User{ID: 1, Name: "John"}, nil
+func (h *UserHandler) Create(data ...any) any {
+    // Process data and return result (which can be an error)
+    return &User{ID: 1, Name: "John"}
 }
 ```
 

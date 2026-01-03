@@ -38,6 +38,24 @@ type PacketResult struct {
 -   `MessageType`: A `uint8` indicating the type of the message (e.g., success, error, info). This uses the `MessageType` values from the `tinystring` library.
 -   `Message`: A human-readable message.
 
+## Individual Operation Packets
+
+For automatic endpoints (e.g., `POST /users`), simplified structures are used as the action and handler are determined by the URL and HTTP method.
+
+```go
+type Request struct {
+    ReqID string
+    Data  [][]byte
+}
+
+type Response struct {
+    ReqID       string
+    Data        [][]byte
+    MessageType uint8
+    Message     string
+}
+```
+
 ## Batching
 
 CRUDP supports batching of requests and responses. A `BatchRequest` is a slice of `Packet`s, and a `BatchResponse` is a slice of `PacketResult`s.

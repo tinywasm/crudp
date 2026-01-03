@@ -89,26 +89,47 @@ func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, er
 		}
 	}
 
+	var result any
+	implemented := false
 	switch action {
 	case 'c':
 		if handler.Create != nil {
-			return handler.Create(data...)
+			result = handler.Create(data...)
+			implemented = true
 		}
 	case 'r':
 		if handler.Read != nil {
-			return handler.Read(data...)
+			result = handler.Read(data...)
+			implemented = true
 		}
 	case 'u':
 		if handler.Update != nil {
-			return handler.Update(data...)
+			result = handler.Update(data...)
+			implemented = true
 		}
 	case 'd':
 		if handler.Delete != nil {
-			return handler.Delete(data...)
+			result = handler.Delete(data...)
+			implemented = true
 		}
+	default:
+		return nil, Errf("unknown action '%c' for handler: %s", action, handler.name)
 	}
 
-	return nil, Errf("action '%c' not implemented for handler: %s", action, handler.name)
+	if !implemented {
+		return nil, Errf("action '%c' not implemented for handler: %s", action, handler.name)
+	}
+
+	if result == nil {
+		return nil, nil
+	}
+
+	// Detect error in result for backward compatibility with server expectations
+	if err, ok := result.(error); ok {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // decodeWithKnownType decodes packet data using cached type information

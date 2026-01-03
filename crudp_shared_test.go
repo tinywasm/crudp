@@ -13,23 +13,27 @@ type User struct {
 	Email string
 }
 
-func (u *User) Create(data ...any) (any, error) {
+func (u *User) Create(data ...any) any {
 	created := make([]*User, 0, len(data))
 	for _, item := range data {
-		user := item.(*User)
-		user.ID = 123
-		created = append(created, user)
+		user, ok := item.(*User)
+		if ok {
+			user.ID = 123
+			created = append(created, user)
+		}
 	}
-	return created, nil
+	return created
 }
 
-func (u *User) Read(data ...any) (any, error) {
+func (u *User) Read(data ...any) any {
 	results := make([]*User, 0, len(data))
 	for _, item := range data {
-		user := item.(*User)
-		results = append(results, &User{ID: user.ID, Name: "Found " + user.Name, Email: user.Email})
+		user, ok := item.(*User)
+		if ok {
+			results = append(results, &User{ID: user.ID, Name: "Found " + user.Name, Email: user.Email})
+		}
 	}
-	return results, nil
+	return results
 }
 
 func CrudPBasicFunctionalityShared(t *testing.T) {
@@ -164,6 +168,6 @@ func LoggerConfigShared(t *testing.T) {
 
 type testLogHandler struct{}
 
-func (h *testLogHandler) Create(data ...any) (any, error) {
-	return "ok", nil
+func (h *testLogHandler) Create(data ...any) any {
+	return "ok"
 }
