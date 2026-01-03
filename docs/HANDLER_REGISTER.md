@@ -82,20 +82,18 @@ type NamedHandler interface {
 
 ## Validation
 
-CRUDP provides two optional interfaces for data validation:
+CRUDP provides an optional interface for data validation:
 
 -   `Validator`: Called **automatically** by `CallHandler` or `Execute` before the action method. If it returns an error, the action is aborted.
--   `FieldValidator`: For manual validation of individual fields (typically used by the UI).
 
 ```go
 type Validator interface {
     Validate(action byte, data ...any) error
 }
-
-type FieldValidator interface {
-    ValidateField(fieldName string, value string) error
-}
 ```
+
+> [!NOTE]
+> For field-level validation (e.g., UI feedback), see `FieldValidator` in [`tinywasm/form`](https://github.com/tinywasm/form).
 
 ## `RegisterHandler`
 

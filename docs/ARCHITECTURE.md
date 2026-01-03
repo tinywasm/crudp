@@ -74,7 +74,6 @@ type Deleter interface { Delete(data ...any) any }
 // Optional interfaces
 type NamedHandler interface { HandlerName() string }
 type Validator interface { Validate(action byte, data ...any) error }
-type FieldValidator interface { ValidateField(fieldName, value string) error }
 ```
 
 ## Implementation Status
@@ -91,4 +90,5 @@ type FieldValidator interface { ValidateField(fieldName, value string) error }
 - [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) - How to integrate CRUDP
 - [INITIALIZATION.md](INITIALIZATION.md) - Initialization and serialization
 - [HANDLER_REGISTER.md](HANDLER_REGISTER.md) - How to create and register handlers
+- [WEBHOOKS.md](WEBHOOKS.md) - How to receive external webhooks
 - [LIMITATIONS.md](LIMITATIONS.md) - Supported data types

@@ -61,13 +61,6 @@ type errorString string
 
 func (e errorString) Error() string { return string(e) }
 
-func (h *ValidatedHandler) ValidateField(fieldName, value string) error {
-	if fieldName == "email" && value == "" {
-		return errorString("email is required")
-	}
-	return nil
-}
-
 // Shared tests
 func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Explicit HandlerName", func(t *testing.T) {
@@ -151,21 +144,6 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 		}
 	})
 
-	t.Run("Field Validation", func(t *testing.T) {
-		h := &ValidatedHandler{}
-
-		if err := h.ValidateField("email", ""); err == nil {
-			t.Error("expected error for empty email")
-		}
-
-		if err := h.ValidateField("email", "test@example.com"); err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		if err := h.ValidateField("name", ""); err != nil {
-			t.Error("non-required field should pass")
-		}
-	})
 }
 
 func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {

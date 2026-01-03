@@ -28,8 +28,3 @@ type NamedHandler interface {
 type Validator interface {
 	Validate(action byte, data ...any) error
 }
-
-// FieldValidator validates individual fields for UI (optional)
-type FieldValidator interface {
-	ValidateField(fieldName string, value string) error
-}

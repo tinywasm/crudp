@@ -1,50 +1,17 @@
-# File Upload Handling: "Upload & Reference" Pattern
+# File Upload Handling: "Direct CRUD" Pattern
 
-This guide demonstrates how to implement file uploads within CRUDP using `HttpRouteProvider` for HTTP routes while keeping CRUD handlers decoupled from transport details.
+This guide demonstrates how to implement file uploads within CRUDP using the automatic endpoints. By injecting `*http.Request` into the handler, you can handle multipart forms directly within your CRUD methods.
 
-## Core Pattern: "Upload & Reference"
+## Core Pattern: Direct Request Handling
 
-**Why not pass `http.ResponseWriter` to handlers?**
+With automatic endpoints, a `POST /files` request is routed to the `Create` method of the `files` handler. If the request is a multipart form (file upload), the handler can detect this by checking the injected `*http.Request`.
 
-Passing `w` to handlers breaks the asynchronous architecture and clean separation:
-1. **Transport Coupling:** Handlers become HTTP-only, untestable without complex mocks.
-2. **Single Responsibility:** HTTP layer handles network I/O; CRUD handlers manage business logic.
+## 1. File Handler Implementation
 
-**Solution:** Use custom HTTP routes to handle physical storage and CRUD handlers to manage file metadata references.
-
-## 1. File Reference & Handler
+The handler uses a type switch to detect if it's receiving a JSON object (WASM or Batch) or the raw `*http.Request` (Direct HTTP Upload).
 
 **File: `modules/files/files.go`**
 ```go
-package files
-
-
-type FileReference struct {
-    ID    string `json:"id"`
-    Path  string `json:"path"`
-    Name  string `json:"name"`
-}
-
-type Handler struct {
-    // Database or storage service
-}
-
-func (h *Handler) Create(data ...any) any {
-    for _, item := range data {
-        ref := item.(*FileReference)
-        // Logic: Save file metadata to database
-    }
-    return "metadata saved"
-}
-```
-
-## 2. HTTP Route Implementation
-
-Implement the `HttpRouteProvider` interface in a backend-only file.
-
-**File: `modules/files/files_stlib.go`**
-```go
-//go:build !wasm
 package files
 
 import (
@@ -53,55 +20,79 @@ import (
     "os"
 )
 
-// Implement HttpRouteProvider interface
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-    mux.HandleFunc("POST /files/upload", h.handleFileUpload)
+type FileReference struct {
+    ID    string `json:"id"`
+    Path  string `json:"path"`
+    Name  string `json:"name"`
 }
 
-func (h *Handler) handleFileUpload(w http.ResponseWriter, r *http.Request) {
-    // 1. Parse Multipart Form
-    file, header, _ := r.FormFile("file")
-    defer file.Close()
+type Handler struct{}
 
-    // 2. Save file to physical storage (disk/S3/etc)
-    dst, _ := os.Create("/uploads/" + header.Filename)
-    io.Copy(dst, file)
+func (h *Handler) HandlerName() string { return "files" }
 
-    // 3. Create metadata reference
-    ref := &FileReference{
-        ID:   "unique-id",
-        Path: "/uploads/" + header.Filename,
-        Name: header.Filename,
+func (h *Handler) Create(data ...any) any {
+    for _, item := range data {
+        switch v := item.(type) {
+        case *http.Request:
+            // 1. Handle Multipart Upload (Server-side only logic)
+            file, header, err := v.FormFile("file")
+            if err != nil {
+                return err
+            }
+            defer file.Close()
+
+            // 2. Save file
+            path := "/uploads/" + header.Filename
+            dst, _ := os.Create(path)
+            io.Copy(dst, file)
+
+            // 3. Return the reference
+            return &FileReference{
+                ID:   "unique-id",
+                Path: path,
+                Name: header.Filename,
+            }
+
+        case *FileReference:
+            // 4. Handle JSON Metadata (Batch or Client-side)
+            // Save metadata to database...
+            return v
+        }
     }
-
-    // 4. Call CRUD logic directly
-    _, err := h.Create(ref)
-    if err != nil {
-        http.Error(w, "Failed to save metadata", 500)
-        return
-    }
-
-    w.Write([]byte("Upload successful"))
+    return nil
 }
 ```
 
-## 3. Integration
+## 2. Server Integration
+
+Registration is automatic. `RegisterRoutes` will create the `POST /files/{path...}` endpoint.
 
 **File: `web/server.go`**
 ```go
 func main() {
-    cp := crudp.NewDefault()
+    cp := crudp.New(binary.Encode, binary.Decode)
     cp.RegisterHandler(&files.Handler{})
     
     mux := http.NewServeMux()
-    cp.RegisterRoutes(mux) // This calls files.Handler.RegisterRoutes
+    cp.RegisterRoutes(mux) // Registers POST /files/{path...}
     
     http.ListenAndServe(":8080", mux)
 }
 ```
 
+## 3. Client Usage (HTML Form)
+
+You can now upload files using a standard HTML form or `fetch` pointed directly at the handler endpoint.
+
+```html
+<form action="/files" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file">
+    <button type="submit">Upload</button>
+</form>
+```
+
 ## Key Benefits
 
-- **🧪 Testability**: CRUD handlers can be tested with mock references without needing a real HTTP server.
-- **🔌 Reusability**: The same metadata logic works whether the file came from HTTP, a CLI import, or a background worker.
-- **🛡️ Security**: You can wrap the entire `mux` with authentication middleware using `cp.ApplyMiddleware(mux)`.
+- **Simplified Routing**: No need for `HttpRouteProvider` or custom route registration.
+- **Unified Logic**: All "Creation" logic (whether metadata or physical file) lives in the `Create` method.
+- **Isomorphic Ready**: The same handler can process both raw uploads on the server and JSON metadata objects from WASM.

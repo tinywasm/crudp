@@ -10,11 +10,6 @@ import (
 	. "github.com/tinywasm/fmt"
 )
 
-// HttpRouteProvider allows handlers to register custom HTTP routes
-type HttpRouteProvider interface {
-	RegisterRoutes(mux *http.ServeMux)
-}
-
 // MiddlewareProvider allows handlers to provide global HTTP middleware
 type MiddlewareProvider interface {
 	Middleware(next http.Handler) http.Handler
@@ -27,24 +22,18 @@ func (cp *CrudP) RegisterRoutes(mux *http.ServeMux) {
 
 	// 2. Generate automatic routes for each handler
 	for _, h := range cp.handlers {
-		name := h.name
 
 		if h.Create != nil {
-			mux.HandleFunc("POST /"+name+"/{path...}", cp.makeHandler(h, 'c'))
+			mux.HandleFunc("POST /"+h.name+"/{path...}", cp.makeHandler(h, 'c'))
 		}
 		if h.Read != nil {
-			mux.HandleFunc("GET /"+name+"/{path...}", cp.makeHandler(h, 'r'))
+			mux.HandleFunc("GET /"+h.name+"/{path...}", cp.makeHandler(h, 'r'))
 		}
 		if h.Update != nil {
-			mux.HandleFunc("PUT /"+name+"/{path...}", cp.makeHandler(h, 'u'))
+			mux.HandleFunc("PUT /"+h.name+"/{path...}", cp.makeHandler(h, 'u'))
 		}
 		if h.Delete != nil {
-			mux.HandleFunc("DELETE /"+name+"/{path...}", cp.makeHandler(h, 'd'))
-		}
-
-		// Let handlers register additional custom HTTP routes if they want
-		if routeProvider, ok := h.handler.(HttpRouteProvider); ok {
-			routeProvider.RegisterRoutes(mux)
+			mux.HandleFunc("DELETE /"+h.name+"/{path...}", cp.makeHandler(h, 'd'))
 		}
 	}
 }

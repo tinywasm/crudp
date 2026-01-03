@@ -1,80 +1,73 @@
 # HTTP Routes & Middleware System
 
-**Prerequisites:** Read [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) first.
-
 ## Overview
 
-While CRUDP focuses on the communication protocol, it also provides hooks to easily integrate custom HTTP endpoints (like file uploads) and global middleware (like authentication) when using the standard library server.
+CRUDP generates automatic HTTP endpoints for your handlers. It also provides a hook for global middleware when using the standard library server (`net/http`).
 
-These features are only available in environments that support the standard library `net/http` (typically using the `!wasm` build tag).
+## 1. Automatic Routing
 
-## 1. Optional HTTP Interfaces
+When you call `RegisterRoutes(mux)`, CRUDP generates endpoints for every handler and its implemented CRUD actions.
 
-CRUDP looks for these interfaces on your registered handlers during route registration.
+| Action | HTTP Method | URL Pattern |
+|--------|-------------|-------------|
+| Create | `POST` | `/{handler_name}/{path...}` |
+| Read   | `GET` | `/{handler_name}/{path...}` |
+| Update | `PUT` | `/{handler_name}/{path...}` |
+| Delete | `DELETE` | `/{handler_name}/{path...}` |
+
+### Accessing Request Details
+
+Handlers receive the following injected values in the `data ...any` slice:
+1. `*context.Context` (always)
+2. `*http.Request` (server-side only)
+3. `string` (the `{path...}` wildcard value)
+
+## 2. Middleware
+
+Handlers can provide global HTTP middleware by implementing the `MiddlewareProvider` interface.
 
 **File: `http_stlib.go`**
 ```go
-// Allows handlers to register custom HTTP routes (e.g., /upload)
-type HttpRouteProvider interface {
-    RegisterRoutes(mux *http.ServeMux)
-}
-
-// Allows handlers to provide global HTTP middleware
 type MiddlewareProvider interface {
     Middleware(next http.Handler) http.Handler
 }
 ```
 
-## 2. Server Implementation
+### Applying Middleware
 
-### Automatic Route Registration
-
-When you call `RegisterRoutes(mux)`, CRUDP automatically iterates through all registered handlers and calls their `RegisterRoutes` method if they implement `HttpRouteProvider`.
+Middleware is applied by wrapping your main mux/handler using `ApplyMiddleware`.
 
 ```go
 cp := router.NewRouter()
 mux := http.NewServeMux()
-cp.RegisterRoutes(mux) // Registers /api AND handler-specific routes
-```
+cp.RegisterRoutes(mux)
 
-### Applying Middleware
-
-Middleware is applied by wrapping your main handler using `ApplyMiddleware`.
-
-```go
+// Apply all middleware from handlers
 handler := cp.ApplyMiddleware(mux)
+
 http.ListenAndServe(":8080", handler)
 ```
 
-## 3. Example: Handler with Custom Routes
+## 3. Example: Handling Custom Logic
 
-You can keep the CRUD logic in a cross-platform file and put the HTTP-specific logic in a file with the `!wasm` build tag.
+Since handlers receive the `*http.Request`, you can handle any HTTP-specific logic (like file uploads or webhooks) directly inside your CRUD methods.
 
-**File: `modules/users/users_stlib.go`**
 ```go
-//go:build !wasm
-package users
-
-import "net/http"
-
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-    mux.HandleFunc("/api/users/export", h.handleExport)
-}
-
-func (h *Handler) handleExport(w http.ResponseWriter, r *http.Request) {
-    // Custom logic to export users as CSV
-}
-
-func (h *Handler) Middleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        log.Println("Request to:", r.URL.Path)
-        next.ServeHTTP(w, r)
-    })
+func (h *UserHandler) Create(data ...any) any {
+    for _, item := range data {
+        if r, ok := item.(*http.Request); ok {
+            // Check headers, handle multipart, etc.
+            if r.Header.Get("X-Custom-Webhook") != "" {
+                return h.handleWebhook(r)
+            }
+        }
+    }
+    // Default JSON processing...
+    return nil
 }
 ```
 
 ## 4. Key Considerations
 
-- **Separation of Concerns**: Keep your protocol logic (`Create`, `Read`, etc.) in files accessible to WASM. Keep HTTP-specific logic (`RegisterRoutes`, `Middleware`) in backend-only files.
-- **Middleware Order**: Middleware is applied in the order handlers were registered with `RegisterHandler`.
-- **Flexibility**: Only implement these interfaces if you actually need them. Most handlers only need the standard CRUD interfaces.
+- **Middleware Order**: Middleware is applied in the order handlers were registered.
+- **WASM Compatibility**: Middleware logic should be in files with the `//go:build !wasm` tag to avoid including `net/http` in the WASM binary.
