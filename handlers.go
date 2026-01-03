@@ -1,7 +1,6 @@
 package crudp
 
 import (
-	"context"
 	"reflect"
 
 	. "github.com/tinywasm/fmt"
@@ -76,7 +75,7 @@ func (cp *CrudP) bind(index uint8, handler any) {
 }
 
 // CallHandler searches and calls the handler directly by shared index
-func (cp *CrudP) CallHandler(ctx context.Context, handlerID uint8, action byte, data ...any) (any, error) {
+func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, error) {
 	if int(handlerID) >= len(cp.handlers) {
 		return nil, Errf("no handler found for id: %d", handlerID)
 	}
@@ -90,29 +89,22 @@ func (cp *CrudP) CallHandler(ctx context.Context, handlerID uint8, action byte, 
 		}
 	}
 
-	// Check context canceled
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
 	switch action {
 	case 'c':
 		if handler.Create != nil {
-			return handler.Create(ctx, data...)
+			return handler.Create(data...)
 		}
 	case 'r':
 		if handler.Read != nil {
-			return handler.Read(ctx, data...)
+			return handler.Read(data...)
 		}
 	case 'u':
 		if handler.Update != nil {
-			return handler.Update(ctx, data...)
+			return handler.Update(data...)
 		}
 	case 'd':
 		if handler.Delete != nil {
-			return handler.Delete(ctx, data...)
+			return handler.Delete(data...)
 		}
 	}
 

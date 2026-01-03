@@ -12,26 +12,24 @@ Handlers implement one or more of the following interfaces. Each method returns 
 ```go
 package crudp
 
-import "context"
-
 // Creator handles create operations.
 type Creator interface {
-    Create(ctx context.Context, data ...any) (any, error)
+    Create(data ...any) (any, error)
 }
 
 // Reader handles read operations.
 type Reader interface {
-    Read(ctx context.Context, data ...any) (any, error)
+    Read(data ...any) (any, error)
 }
 
 // Updater handles update operations.
 type Updater interface {
-    Update(ctx context.Context, data ...any) (any, error)
+    Update(data ...any) (any, error)
 }
 
 // Deleter handles delete operations.
 type Deleter interface {
-    Delete(ctx context.Context, data ...any) (any, error)
+    Delete(data ...any) (any, error)
 }
 ```
 
@@ -39,6 +37,32 @@ type Deleter interface {
 
 -   **Return types**: Returning an explicit `error` allows CRUDP to automatically populate the `MessageType` (Error) and `Message` fields in the `PacketResult` sent back to the client.
 -   **Dynamic Results**: The first return value (`any`) can be a simple struct, a slice of structs (for multi-item responses), or primitive values.
+
+## Processing Data with For Loop
+
+Handlers receive injected values (context, http.Request) plus user data in the `data` slice. Always iterate with a type switch:
+
+```go
+func (h *UserHandler) Create(data ...any) (any, error) {
+    var ctx *context.Context
+    var req *http.Request  // Only present on server
+    var users []*User
+
+    for _, item := range data {
+        switch v := item.(type) {
+        case *context.Context:
+            ctx = v
+        case *http.Request:
+            req = v  // Only on server (!wasm)
+        case *User:
+            users = append(users, v)
+        }
+    }
+
+    // Now use ctx, req (if present), and users
+    return processedUsers, nil
+}
+```
 
 ## Handler Naming
 

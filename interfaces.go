@@ -1,23 +1,21 @@
 package crudp
 
-import "context"
-
 // Separate CRUD interfaces - handlers implement only what they need
 // Return `any` which internally can be slice for multiple items
 type Creator interface {
-	Create(ctx context.Context, data ...any) (any, error)
+	Create(data ...any) (any, error)
 }
 
 type Reader interface {
-	Read(ctx context.Context, data ...any) (any, error)
+	Read(data ...any) (any, error)
 }
 
 type Updater interface {
-	Update(ctx context.Context, data ...any) (any, error)
+	Update(data ...any) (any, error)
 }
 
 type Deleter interface {
-	Delete(ctx context.Context, data ...any) (any, error)
+	Delete(data ...any) (any, error)
 }
 
 // NamedHandler allows override of automatic name (optional)

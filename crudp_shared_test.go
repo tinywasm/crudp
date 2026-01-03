@@ -1,7 +1,6 @@
 package crudp_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/tinywasm/crudp"
@@ -14,7 +13,7 @@ type User struct {
 	Email string
 }
 
-func (u *User) Create(ctx context.Context, data ...any) (any, error) {
+func (u *User) Create(data ...any) (any, error) {
 	created := make([]*User, 0, len(data))
 	for _, item := range data {
 		user := item.(*User)
@@ -24,7 +23,7 @@ func (u *User) Create(ctx context.Context, data ...any) (any, error) {
 	return created, nil
 }
 
-func (u *User) Read(ctx context.Context, data ...any) (any, error) {
+func (u *User) Read(data ...any) (any, error) {
 	results := make([]*User, 0, len(data))
 	for _, item := range data {
 		user := item.(*User)
@@ -55,7 +54,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 
 	batchReq := &crudp.BatchRequest{Packets: []crudp.Packet{createPacket}}
 
-	batchResp, err := cp.Execute(context.Background(), batchReq)
+	batchResp, err := cp.Execute(batchReq)
 	if err != nil {
 		t.Fatalf("Failed to execute batch: %v", err)
 	}
@@ -100,7 +99,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 
 	batchReq2 := &crudp.BatchRequest{Packets: []crudp.Packet{readPacket}}
 
-	batchResp2, err := cp.Execute(context.Background(), batchReq2)
+	batchResp2, err := cp.Execute(batchReq2)
 	if err != nil {
 		t.Fatalf("Failed to execute read batch: %v", err)
 	}
@@ -165,6 +164,6 @@ func LoggerConfigShared(t *testing.T) {
 
 type testLogHandler struct{}
 
-func (h *testLogHandler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *testLogHandler) Create(data ...any) (any, error) {
 	return "ok", nil
 }

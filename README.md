@@ -20,7 +20,7 @@ A JSON/binary CRUD protocol for isomorphic Go applications. Limits its responsib
 ```go
 type UserHandler struct{}
 
-func (h *UserHandler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *UserHandler) Create(data ...any) (any, error) {
     // Process data and return result or error
     return &User{ID: 1, Name: "John"}, nil
 }
@@ -34,7 +34,7 @@ cp.RegisterHandler(&UserHandler{})
 
 // On server:
 // req, _ := decodeRequest(body)
-// resp, _ := cp.Execute(ctx, req)
+// resp, _ := cp.Execute(req)
 ```
 
 ## Documentation

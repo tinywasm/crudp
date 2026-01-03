@@ -1,14 +1,14 @@
 package crudp
 
 import (
-	"context"
 	"reflect"
 
 	. "github.com/tinywasm/fmt"
 )
 
 // Execute processes a BatchRequest and returns a BatchResponse
-func (cp *CrudP) Execute(ctx context.Context, req *BatchRequest) (*BatchResponse, error) {
+// inject contains values to prepend to handler data (e.g., context, http.Request)
+func (cp *CrudP) Execute(req *BatchRequest, inject ...any) (*BatchResponse, error) {
 	if req == nil {
 		return nil, Errf("request is nil")
 	}
@@ -16,7 +16,7 @@ func (cp *CrudP) Execute(ctx context.Context, req *BatchRequest) (*BatchResponse
 	results := make([]PacketResult, 0, len(req.Packets))
 
 	for _, p := range req.Packets {
-		result := cp.executeSingle(ctx, &p)
+		result := cp.executeSingle(&p, inject...)
 		results = append(results, result)
 	}
 
@@ -25,7 +25,7 @@ func (cp *CrudP) Execute(ctx context.Context, req *BatchRequest) (*BatchResponse
 	}, nil
 }
 
-func (cp *CrudP) executeSingle(ctx context.Context, p *Packet) PacketResult {
+func (cp *CrudP) executeSingle(p *Packet, inject ...any) PacketResult {
 	pr := PacketResult{
 		Packet: *p,
 	}
@@ -38,8 +38,11 @@ func (cp *CrudP) executeSingle(ctx context.Context, p *Packet) PacketResult {
 		return pr
 	}
 
+	// Prepend inject values to decoded data
+	allData := append(inject, decodedData...)
+
 	// Call handler
-	result, err := cp.CallHandler(ctx, p.HandlerID, p.Action, decodedData...)
+	result, err := cp.CallHandler(p.HandlerID, p.Action, allData...)
 	if err != nil {
 		pr.MessageType = uint8(Msg.Error)
 		pr.Message = err.Error()

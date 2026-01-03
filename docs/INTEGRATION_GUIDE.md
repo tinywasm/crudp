@@ -31,18 +31,32 @@ Business modules implement standard interfaces. They should return the result of
 ```go
 package users
 
-import "context"
+import (
+    "github.com/tinywasm/context"
+    "net/http"
+)
 
 type Handler struct{}
 
-// Implement CRUDP interfaces (Creator, Reader, Updater, Deleter)
-func (h *Handler) Create(ctx context.Context, data ...any) (any, error) {
-    // Process each item (data elements are concrete types decoded by CRUDP)
-    return "user created", nil
-}
+// Implement CRUDP interfaces - iterate data with type switch
+func (h *Handler) Create(data ...any) (any, error) {
+    var ctx *context.Context
+    var users []*User
 
-func (h *Handler) Read(ctx context.Context, data ...any) (any, error) {
-    return "user data", nil
+    for _, item := range data {
+        switch v := item.(type) {
+        case *context.Context:
+            ctx = v
+        case *http.Request:
+            // Only on server - use for auth, headers, etc.
+        case *User:
+            users = append(users, v)
+        }
+    }
+
+    // Process users with context available
+    _ = ctx
+    return "user created", nil
 }
 ```
 

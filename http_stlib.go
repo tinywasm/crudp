@@ -5,6 +5,8 @@ package crudp
 import (
 	"io"
 	"net/http"
+
+	"github.com/tinywasm/context"
 )
 
 // HttpRouteProvider allows handlers to register custom HTTP routes
@@ -64,7 +66,9 @@ func (cp *CrudP) handleBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := cp.Execute(r.Context(), &req)
+	// Inject context and http.Request for handlers
+	ctx := context.TODO()
+	resp, err := cp.Execute(&req, ctx, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

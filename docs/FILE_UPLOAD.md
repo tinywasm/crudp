@@ -18,7 +18,6 @@ Passing `w` to handlers breaks the asynchronous architecture and clean separatio
 ```go
 package files
 
-import "context"
 
 type FileReference struct {
     ID    string `json:"id"`
@@ -30,7 +29,7 @@ type Handler struct {
     // Database or storage service
 }
 
-func (h *Handler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *Handler) Create(data ...any) (any, error) {
     for _, item := range data {
         ref := item.(*FileReference)
         // Logic: Save file metadata to database
@@ -76,7 +75,7 @@ func (h *Handler) handleFileUpload(w http.ResponseWriter, r *http.Request) {
     }
 
     // 4. Call CRUD logic directly
-    _, err := h.Create(r.Context(), ref)
+    _, err := h.Create(ref)
     if err != nil {
         http.Error(w, "Failed to save metadata", 500)
         return

@@ -1,7 +1,5 @@
 package patient
 
-import "context"
-
 type Handler struct{}
 
 type Patient struct {
@@ -10,12 +8,12 @@ type Patient struct {
 	Age  int
 }
 
-func (h *Handler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *Handler) Create(data ...any) (any, error) {
 	// Specific implementation for patients
 	return nil, nil
 }
 
-func (h *Handler) Read(ctx context.Context, data ...any) (any, error) {
+func (h *Handler) Read(data ...any) (any, error) {
 	// Specific implementation for patients
 	return nil, nil
 }

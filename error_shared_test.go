@@ -1,7 +1,6 @@
 package crudp_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/tinywasm/crudp"
@@ -18,7 +17,7 @@ func CrudPErrorHandlingShared(t *testing.T) {
 			},
 		}
 
-		resp, err := cp.Execute(context.Background(), req)
+		resp, err := cp.Execute(req)
 		if err != nil {
 			t.Fatalf("Execute failed: %v", err)
 		}

@@ -1,7 +1,6 @@
 package crudp_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/tinywasm/crudp"
@@ -15,7 +14,7 @@ type ExplicitCreateResponse struct {
 }
 
 func (h *explicitNameHandler) HandlerName() string { return "my_custom_name" }
-func (h *explicitNameHandler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *explicitNameHandler) Create(data ...any) (any, error) {
 	return ExplicitCreateResponse{Message: "created"}, nil
 }
 
@@ -32,11 +31,11 @@ type ReadResponse struct {
 	Name string `json:"name"`
 }
 
-func (h *UserController) Create(ctx context.Context, data ...any) (any, error) {
+func (h *UserController) Create(data ...any) (any, error) {
 	return CreateResponse{ID: 1, Status: "created"}, nil
 }
 
-func (h *UserController) Read(ctx context.Context, data ...any) (any, error) {
+func (h *UserController) Read(data ...any) (any, error) {
 	return ReadResponse{ID: 1, Name: "test"}, nil
 }
 
@@ -47,7 +46,7 @@ type ValidatedCreateResponse struct {
 	Message string `json:"message"`
 }
 
-func (h *ValidatedHandler) Create(ctx context.Context, data ...any) (any, error) {
+func (h *ValidatedHandler) Create(data ...any) (any, error) {
 	return ValidatedCreateResponse{Message: "validated_created"}, nil
 }
 
@@ -133,8 +132,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&ValidatedHandler{})
 
-		ctx := context.Background()
-		result, err := cp.CallHandler(ctx, 0, 'c', "some data")
+		result, err := cp.CallHandler(0, 'c', "some data")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -147,8 +145,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&ValidatedHandler{})
 
-		ctx := context.Background()
-		_, err := cp.CallHandler(ctx, 0, 'c') // No data
+		_, err := cp.CallHandler(0, 'c') // No data
 		if err == nil {
 			t.Error("expected validation error")
 		}
@@ -176,8 +173,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
-		ctx := context.Background()
-		result, err := cp.CallHandler(ctx, 0, 'c', map[string]any{"name": "test"})
+		result, err := cp.CallHandler(0, 'c', map[string]any{"name": "test"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -194,8 +190,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
-		ctx := context.Background()
-		result, err := cp.CallHandler(ctx, 0, 'r', 1)
+		result, err := cp.CallHandler(0, 'r', 1)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -212,8 +207,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{}) // Only has Create and Read
 
-		ctx := context.Background()
-		_, err := cp.CallHandler(ctx, 0, 'd', 1) // Delete not implemented
+		_, err := cp.CallHandler(0, 'd', 1) // Delete not implemented
 		if err == nil {
 			t.Error("expected error for unimplemented action")
 		}
@@ -223,8 +217,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 		cp := NewTestCrudP()
 		cp.RegisterHandler(&UserController{})
 
-		ctx := context.Background()
-		_, err := cp.CallHandler(ctx, 99, 'r', 1)
+		_, err := cp.CallHandler(99, 'r', 1)
 		if err == nil {
 			t.Error("expected error for invalid handler ID")
 		}

@@ -1,15 +1,13 @@
 package crudp
 
-import "context"
-
 type actionHandler struct {
 	name    string
 	index   uint8
 	handler any
-	Create  func(ctx context.Context, data ...any) (any, error)
-	Read    func(ctx context.Context, data ...any) (any, error)
-	Update  func(ctx context.Context, data ...any) (any, error)
-	Delete  func(ctx context.Context, data ...any) (any, error)
+	Create  func(data ...any) (any, error)
+	Read    func(data ...any) (any, error)
+	Update  func(data ...any) (any, error)
+	Delete  func(data ...any) (any, error)
 }
 
 // CrudP handles automatic handler processing

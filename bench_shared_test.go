@@ -1,7 +1,6 @@
 package crudp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/tinywasm/binary"
@@ -15,7 +14,7 @@ type BenchUser struct {
 	Age   uint8
 }
 
-func (u *BenchUser) Create(ctx context.Context, data ...any) (any, error) {
+func (u *BenchUser) Create(data ...any) (any, error) {
 	created := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
@@ -25,7 +24,7 @@ func (u *BenchUser) Create(ctx context.Context, data ...any) (any, error) {
 	return created, nil
 }
 
-func (u *BenchUser) Read(ctx context.Context, data ...any) (any, error) {
+func (u *BenchUser) Read(data ...any) (any, error) {
 	results := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
@@ -39,7 +38,7 @@ func (u *BenchUser) Read(ctx context.Context, data ...any) (any, error) {
 	return results, nil
 }
 
-func (u *BenchUser) Update(ctx context.Context, data ...any) (any, error) {
+func (u *BenchUser) Update(data ...any) (any, error) {
 	updated := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
 		user := item.(*BenchUser)
@@ -49,7 +48,7 @@ func (u *BenchUser) Update(ctx context.Context, data ...any) (any, error) {
 	return updated, nil
 }
 
-func (u *BenchUser) Delete(ctx context.Context, data ...any) (any, error) {
+func (u *BenchUser) Delete(data ...any) (any, error) {
 	return len(data), nil
 }
 
@@ -104,7 +103,7 @@ func BenchmarkCrudPExecuteShared(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		resp, err = cp.Execute(context.Background(), req)
+		resp, err = cp.Execute(req)
 		if err != nil {
 			b.Fatalf("Execute failed: %v", err)
 		}
