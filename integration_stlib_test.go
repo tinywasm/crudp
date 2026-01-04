@@ -55,9 +55,9 @@ func TestIntegration_NewDefault(t *testing.T) {
 		t.Fatal("NewDefault returned nil")
 	}
 
-	err := cp.RegisterHandler(&IntegrationUserHandler{})
+	err := cp.RegisterHandlers(&IntegrationUserHandler{})
 	if err != nil {
-		t.Fatalf("RegisterHandler failed: %v", err)
+		t.Fatalf("RegisterHandlers failed: %v", err)
 	}
 
 	// Verify handler name
@@ -68,7 +68,7 @@ func TestIntegration_NewDefault(t *testing.T) {
 
 func TestIntegration_AutomaticEndpoints(t *testing.T) {
 	cp := crudp.NewDefault()
-	cp.RegisterHandler(&IntegrationUserHandler{})
+	cp.RegisterHandlers(&IntegrationUserHandler{})
 
 	mux := http.NewServeMux()
 	cp.RegisterRoutes(mux)

@@ -1,28 +1,13 @@
 package user
 
+// User is the shared model between backend and frontend
+type User struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// Handler implements CRUD operations for users
 type Handler struct{}
 
-type User struct {
-	ID    int
-	Name  string
-	Email string
-}
-
-func (h *Handler) Create(data ...any) any {
-	created := make([]*User, 0, len(data))
-	for _, item := range data {
-		user := item.(*User)
-		user.ID = 123
-		created = append(created, user)
-	}
-	return created
-}
-
-func (h *Handler) Read(data ...any) any {
-	results := make([]*User, 0, len(data))
-	for _, item := range data {
-		user := item.(*User)
-		results = append(results, &User{ID: user.ID, Name: "Found " + user.Name, Email: user.Email})
-	}
-	return results
-}
+func (h *Handler) HandlerName() string { return "users" }

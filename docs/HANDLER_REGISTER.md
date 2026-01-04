@@ -95,13 +95,13 @@ type Validator interface {
 > [!NOTE]
 > For field-level validation (e.g., UI feedback), see `FieldValidator` in [`tinywasm/form`](https://github.com/tinywasm/form).
 
-## `RegisterHandler`
+## `RegisterHandlers`
 
 Use this method to register your handler instances. Order matters: the index in the slice becomes the `HandlerID` used in the protocol.
 
 ```go
 cp := crudp.New(binary.Encode, binary.Decode)
-err := cp.RegisterHandler(&UserHandler{}, &ProductHandler{})
+err := cp.RegisterHandlers(&UserHandler{}, &ProductHandler{})
 ```
 
 During registration, CRUDP:

@@ -30,7 +30,7 @@ func (h *UserHandler) Create(data ...any) any {
 
 ```go
 cp := crudp.New(binary.Encode, binary.Decode)
-cp.RegisterHandler(&UserHandler{})
+cp.RegisterHandlers(&UserHandler{})
 
 // On server:
 // req, _ := decodeRequest(body)

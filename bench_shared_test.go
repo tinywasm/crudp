@@ -73,8 +73,8 @@ func BenchmarkCrudPSetupShared(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cp = New(binary.Encode, binary.Decode)
-		if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-			b.Fatalf("RegisterHandler failed: %v", err)
+		if err := cp.RegisterHandlers(&BenchUser{}); err != nil {
+			b.Fatalf("RegisterHandlers failed: %v", err)
 		}
 	}
 
@@ -84,8 +84,8 @@ func BenchmarkCrudPSetupShared(b *testing.B) {
 // BenchmarkCrudPExecute measures allocations for executing a batch request
 func BenchmarkCrudPExecuteShared(b *testing.B) {
 	cp := New(binary.Encode, binary.Decode)
-	if err := cp.RegisterHandler(&BenchUser{}); err != nil {
-		b.Fatalf("RegisterHandler failed: %v", err)
+	if err := cp.RegisterHandlers(&BenchUser{}); err != nil {
+		b.Fatalf("RegisterHandlers failed: %v", err)
 	}
 
 	var userData []byte

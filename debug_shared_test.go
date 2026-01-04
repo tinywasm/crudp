@@ -8,7 +8,7 @@ import (
 
 func HandlerInstanceReuseShared(t *testing.T) {
 	cp := NewTestCrudP()
-	if err := cp.RegisterHandler(&User{}); err != nil {
+	if err := cp.RegisterHandlers(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
@@ -38,7 +38,7 @@ func HandlerInstanceReuseShared(t *testing.T) {
 
 func ConcurrentHandlerAccessShared(t *testing.T) {
 	cp := NewTestCrudP()
-	if err := cp.RegisterHandler(&User{}); err != nil {
+	if err := cp.RegisterHandlers(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 

@@ -39,7 +39,7 @@ func (u *User) Read(data ...any) any {
 func CrudPBasicFunctionalityShared(t *testing.T) {
 	// Initialize CRUDP with handlers
 	cp := NewTestCrudP()
-	if err := cp.RegisterHandler(&User{}); err != nil {
+	if err := cp.RegisterHandlers(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
@@ -149,7 +149,7 @@ func LoggerConfigShared(t *testing.T) {
 		})
 
 		// Register handler to trigger log
-		err := cp.RegisterHandler(&testLogHandler{})
+		err := cp.RegisterHandlers(&testLogHandler{})
 		if err != nil {
 			t.Fatal(err)
 		}

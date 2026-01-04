@@ -74,7 +74,7 @@ func (h *Handler) Create(data ...any) any {
 
 ```go
 cp := crudp.New(binary.Encode, binary.Decode)
-cp.RegisterHandler(&webhooks.Handler{})
+cp.RegisterHandlers(&webhooks.Handler{})
 
 mux := http.NewServeMux()
 cp.RegisterRoutes(mux) // Registers POST /webhooks/{path...}

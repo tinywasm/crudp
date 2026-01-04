@@ -65,7 +65,7 @@ func (e errorString) Error() string { return string(e) }
 func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Explicit HandlerName", func(t *testing.T) {
 		cp := NewTestCrudP()
-		err := cp.RegisterHandler(&explicitNameHandler{})
+		err := cp.RegisterHandlers(&explicitNameHandler{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -78,7 +78,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Reflection Name (snake_case)", func(t *testing.T) {
 		cp := NewTestCrudP()
-		err := cp.RegisterHandler(&UserController{})
+		err := cp.RegisterHandlers(&UserController{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -91,7 +91,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Nil Handler Error", func(t *testing.T) {
 		cp := NewTestCrudP()
-		err := cp.RegisterHandler(nil)
+		err := cp.RegisterHandlers(nil)
 		if err == nil {
 			t.Error("expected error for nil handler")
 		}
@@ -99,7 +99,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Multiple Handlers", func(t *testing.T) {
 		cp := NewTestCrudP()
-		err := cp.RegisterHandler(
+		err := cp.RegisterHandlers(
 			&explicitNameHandler{},
 			&UserController{},
 			&ValidatedHandler{},
@@ -123,7 +123,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Validation Passes", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&ValidatedHandler{})
+		cp.RegisterHandlers(&ValidatedHandler{})
 
 		result, err := cp.CallHandler(0, 'c', "some data")
 		if err != nil {
@@ -136,7 +136,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Validation Fails", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&ValidatedHandler{})
+		cp.RegisterHandlers(&ValidatedHandler{})
 
 		_, err := cp.CallHandler(0, 'c') // No data
 		if err == nil {
@@ -149,7 +149,7 @@ func HandlerValidationShared(t *testing.T, cp *crudp.CrudP) {
 func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Create Operation", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&UserController{})
+		cp.RegisterHandlers(&UserController{})
 
 		result, err := cp.CallHandler(0, 'c', map[string]any{"name": "test"})
 		if err != nil {
@@ -166,7 +166,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Read Operation", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&UserController{})
+		cp.RegisterHandlers(&UserController{})
 
 		result, err := cp.CallHandler(0, 'r', 1)
 		if err != nil {
@@ -183,7 +183,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Unimplemented Action", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&UserController{}) // Only has Create and Read
+		cp.RegisterHandlers(&UserController{}) // Only has Create and Read
 
 		_, err := cp.CallHandler(0, 'd', 1) // Delete not implemented
 		if err == nil {
@@ -193,7 +193,7 @@ func CRUDOperationsShared(t *testing.T, cp *crudp.CrudP) {
 
 	t.Run("Invalid Handler ID", func(t *testing.T) {
 		cp := NewTestCrudP()
-		cp.RegisterHandler(&UserController{})
+		cp.RegisterHandlers(&UserController{})
 
 		_, err := cp.CallHandler(99, 'r', 1)
 		if err == nil {

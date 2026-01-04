@@ -24,8 +24,8 @@ func getHandlerName(handler any) string {
 	return Convert(t.Name()).SnakeLow().String()
 }
 
-// RegisterHandler prepares the shared handler table
-func (cp *CrudP) RegisterHandler(handlers ...any) error {
+// RegisterHandlers prepares the shared handler table
+func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 	cp.handlers = make([]actionHandler, len(handlers))
 
 	for i, h := range handlers {

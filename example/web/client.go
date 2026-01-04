@@ -3,12 +3,14 @@
 package main
 
 import (
-	"github.com/tinywasm/crudp/example/pkg/router"
+	"github.com/tinywasm/crudp"
+	"github.com/tinywasm/crudp/example/modules"
 )
 
 func main() {
-	// Initialize CRUDP router
-	cp := router.NewRouter()
+	// Initialize CRUDP directly
+	cp := crudp.NewDefault()
+	cp.RegisterHandlers(modules.Init()...)
 
 	// Connect fetch responses to CRUDP handlers
 	cp.InitClient()

@@ -2,109 +2,154 @@
 
 ## Overview
 
-This guide explains how to integrate CRUDP into a Go project for protocol execution between server and WASM client. CRUDP is used to map network packets to handler logic; business modules remain decoupled.
+This guide explains how to integrate CRUDP into a Go project for isomorphic execution between server and WASM client. CRUDP automatically routes packets to handlers; business modules remain decoupled.
 
 ## Project Structure
 
 ```
 myProject/
 ├── modules/
-│   ├── modules.go          # Handler instances collection
+│   ├── modules.go              # Handler instances collection & DI
 │   └── users/
-│       └── users.go        # Business logic (implements CRUD interfaces)
-├── pkg/
-│   └── router/
-│       └── router.go       # CRUDP initialization
-├── web/
-│   ├── client.go           # WASM entry point
-│   └── server.go           # Server entry point
-└── go.mod                  # Dependencies: tinywasm/crudp, tinywasm/broker
+│       ├── user.go             # Shared: model + handler struct
+│       ├── back.go             # Backend: server-side CRUD logic
+│       └── front.go            # Frontend: WASM DOM updates
+└── web/
+    ├── client.go               # WASM entry point (Init CRUDP)
+    └── server.go               # Server entry point (Init CRUDP)
 ```
 
 ## Implementation Steps
 
-### 1. Define Handler with CRUD Interfaces
+### 1. Define Shared Model and Handler
 
-Business modules implement standard interfaces. They should return the result of the operation and an error.
+Keep the model and handler struct in a file without build tags.
 
-**File: `modules/users/users.go`**
+**File: `modules/users/user.go`**
 ```go
-package users
+package user
+
+// User is the shared model between backend and frontend
+type User struct {
+    ID    int    
+    Name  string 
+    Email string
+}
+
+// Handler implements CRUD operations for users
+type Handler struct{}
+
+func (h *Handler) HandlerName() string { return "users" }
+```
+
+### 2. Implement Backend Logic
+
+Server-side CRUD operations receive `*context.Context`, `*http.Request`, and typed data.
+
+**File: `modules/users/back.go`**
+```go
+//go:build !wasm
+
+package user
 
 import (
+    "github.com/tinywasm/fmt"
     "github.com/tinywasm/context"
     "net/http"
 )
 
-type Handler struct{}
+// Mock database
+var users = []*User{
+    {ID: 1, Name: "Alice", Email: "alice@example.com"},
+    {ID: 2, Name: "Bob", Email: "bob@example.com"},
+}
 
-// Implement CRUDP interfaces - iterate data with type switch
 func (h *Handler) Create(data ...any) any {
-    var ctx *context.Context
-    var id  string
-    var users []*User
-
     for _, item := range data {
         switch v := item.(type) {
-        case string:
-            id = v
         case *context.Context:
-            ctx = v
+            // Use for auth, tracing, cancellation
         case *http.Request:
-            // Only on server - use for auth, headers, etc.
+            // Access headers, parse multipart uploads
         case *User:
-            users = append(users, v)
+            // Save to DB...
+            return v
         }
     }
+    return nil
+}
 
-    // Process users with context available
-    _ = ctx
-    _ = id
-    return "user created"
+func (h *Handler) Read(data ...any) any {
+    for _, item := range data {
+        if path, ok := item.(string); ok {
+            if path == "" { return users } // All users
+            for _, u := range users {
+                if fmt.Fmt("%d", u.ID) == path { return u }
+            }
+        }
+    }
+    return users
 }
 ```
 
-### 2. Register Handlers
+### 3. Implement Frontend Logic
 
-Collect all business modules into a single list for registration.
+WASM handlers update local state and DOM when receiving server responses.
+
+**File: `modules/users/front.go`**
+```go
+//go:build wasm
+
+package user
+
+import (
+    "github.com/tinywasm/dom"
+    . "github.com/tinywasm/fmt"
+)
+
+func (h *Handler) Read(data ...any) any {
+    for _, item := range data {
+        switch v := item.(type) {
+        case *User:
+            el, _ := dom.Get("user-detail")
+            el.SetHTML(renderUserItem(v))
+        case []*User:
+            listEl, _ := dom.Get("user-list")
+            listEl.SetHTML(renderUserList(v))
+        }
+    }
+    return nil
+}
+
+// Helper render functions
+func renderUserItem(u *User) string {
+    return Html(`<div id="user-%d" class="user-item">
+        <span>%s</span>
+    </div>`, u.ID, u.Name).String()
+}
+```
+
+### 4. Collect Modules (Dependency Injection)
+
+Use this file to instantiate handlers and inject any required dependencies (DB, services).
 
 **File: `modules/modules.go`**
 ```go
 package modules
 
-import "myProject/modules/users"
+import "myProject/modules/user"
 
 func Init() []any {
     return []any{
-        &users.Handler{}, // Registered at index 0 (HandlerID: 0)
+        &user.Handler{},
+        // Add other handlers here...
     }
 }
 ```
 
-### 3. Initialize CRUDP Router
+### 5. Server Entry Point
 
-Configure the CRUDP instance with your modules.
-
-**File: `pkg/router/router.go`**
-```go
-package router
-
-import (
-    "github.com/tinywasm/crudp"
-    "github.com/tinywasm/binary"
-    "myProject/modules"
-)
-
-func NewRouter() *crudp.CrudP {
-    cp := crudp.New(binary.Encode, binary.Decode)
-    cp.RegisterHandler(modules.Init()...)
-    return cp
-}
-```
-
-### 4. Server Integration (Standard HTTP)
-
-Use `RegisterRoutes` to expose the endpoint automatically.
+Initialize CRUDP and register routes directly.
 
 **File: `web/server.go`**
 ```go
@@ -114,23 +159,29 @@ package main
 
 import (
     "net/http"
-    "myProject/pkg/router"
+    "github.com/tinywasm/crudp"
+    "myProject/modules"
 )
 
 func main() {
-    cp := router.NewRouter()
-    
     mux := http.NewServeMux()
-    // Registers POST /batch and automatic endpoints (e.g., POST /users)
-    cp.RegisterRoutes(mux)
+
+    // 1. Initialize CRUDP
+    cp := crudp.NewDefault()
+    
+    // 2. Register Handlers
+    cp.RegisterHandlers(modules.Init()...)
+    
+    // 3. Expose automatic endpoints
+    cp.RegisterRoutes(mux) 
     
     http.ListenAndServe(":8080", mux)
 }
 ```
 
-### 5. Client Integration (WASM Batching)
+### 6. Client Entry Point
 
-On the client side, use `tinywasm/broker` to batch operations.
+Initialize CRUDP and connect it to the global fetch handler.
 
 **File: `web/client.go`**
 ```go
@@ -139,22 +190,27 @@ On the client side, use `tinywasm/broker` to batch operations.
 package main
 
 import (
-    "myProject/pkg/router"
+    "github.com/tinywasm/crudp"
+    "myProject/modules"
 )
 
 func main() {
-    cp := router.NewRouter()
+    // 1. Initialize CRUDP
+    cp := crudp.NewDefault()
     
-    // Configure global fetch handler to route responses into CRUDP handlers
-    cp.InitClient()
+    // 2. Register Handlers
+    cp.RegisterHandlers(modules.Init()...)
     
-    // Application continues...
-    select {}
+    // 3. Connect responses to handlers
+    cp.InitClient() 
+    
+    select {} 
 }
 ```
 
 ## Key Principles
 
-- **📦 Decoupling:** Business modules don't import CRUDP; they just implement basic Go interfaces.
-- **⚡ Zero Overhead:** Internal method binding avoids reflection during request execution.
-- **🎯 Execution Only:** CRUDP focuses on mapping packets to handlers; it doesn't care how they are transported.
+- **📦 Decoupling**: Business modules don't import CRUDP.
+- **🔄 Isomorphic**: Same handler struct, different logic per platform using build tags.
+- **⚡ Automatic Routing**: RESTful endpoints generated from handler names.
+- **🛠️ Direct Initialization**: No complex boilerplates; just `NewDefault()` + `RegisterHandlers()`.
