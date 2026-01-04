@@ -2,43 +2,60 @@
 
 ## Overview
 
-CRUDP is designed to be as simple as possible. Since most transport-related concerns have been moved to separate packages (like `tinywasm/broker`), the initialization focuses primarily on mandatory serialization functions.
+CRUDP is designed to be as simple as possible. By default, it uses `tinywasm/binary` for serialization, but you can configure custom codecs if needed.
 
 ## Serialization
 
-CRUDP requires serialization functions to convert between Go types and the raw byte slices stored in `Packet.Data`. This is handled by passing two mandatory function parameters to the constructor.
+CRUDP requires serialization functions to convert between Go types and the raw byte slices stored in `Packet.Data`. 
 
-This design allows for maximum flexibility and easy integration with libraries like `tinywasm/binary` or standard `encoding/json`.
+### Using `tinywasm/binary` (Default)
 
-### Using `tinywasm/binary` (Recommended)
+The standard constructor initializes CRUDP with the high-performance `tinywasm/binary` codec automatically.
 
 ```go
 import (
     "github.com/tinywasm/crudp"
-    "github.com/tinywasm/binary"
 )
 
 func NewRouter() *crudp.CrudP {
-    // Pass Encode and Decode functions directly
-    return crudp.New(binary.Encode, binary.Decode)
+    // Uses tinywasm/binary by default
+    return crudp.New()
 }
 ```
 
-## Constructors
+### Custom Codecs
 
-### `New(encode, decode func(any, any) error)`
+If you need to use a different format (like JSON), you can use the `SetCodecs` method.
 
-The primary constructor for `CrudP`. Both parameters are mandatory to ensure that the execution engine can process packet data. 
+```go
+import (
+    "encoding/json"
+    "github.com/tinywasm/crudp"
+)
+
+func main() {
+    cp := crudp.New()
+    
+    // Override default binary codec with JSON
+    cp.SetCodecs(json.Marshal, json.Unmarshal)
+}
+```
+
+## Public API
+
+### `New()`
+
+The primary constructor. Initializes a `CrudP` instance with:
+- Default binary codec (`binary.Encode`/`binary.Decode`)
+- Logging disabled (no-op)
+
+### `SetCodecs(encode, decode func(any, any) error)`
+
+Configures custom serialization functions.
 
 - **encode**: Typically receives a Go struct as `input` and a `*[]byte` as `output`.
 - **decode**: Typically receives a `[]byte` as `input` and a pointer to a Go struct as `output`.
 
-## Other Settings (Methods)
+### `SetLog(log func(...any))`
 
-Secondary settings are configured via methods on the `CrudP` instance to keep the constructor simple.
-
-### Logging
-
-Logging is disabled by default (no-op).
-
-- `SetLog(log func(...any))`: Sets a custom logging function. Passing `nil` restores the default no-op behavior (disables logging).
+Configures a custom logging function. Passing `nil` restores the default no-op behavior (disables logging).

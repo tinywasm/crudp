@@ -48,11 +48,11 @@ func (h *IntegrationUserHandler) Read(data ...any) any {
 	return nil
 }
 
-func TestIntegration_NewDefault(t *testing.T) {
-	// Test NewDefault uses binary codec
-	cp := crudp.NewDefault()
+func TestIntegration_New(t *testing.T) {
+	// Test New uses binary codec by default
+	cp := NewTestCrudP()
 	if cp == nil {
-		t.Fatal("NewDefault returned nil")
+		t.Fatal("New returned nil")
 	}
 
 	err := cp.RegisterHandlers(&IntegrationUserHandler{})
@@ -67,7 +67,7 @@ func TestIntegration_NewDefault(t *testing.T) {
 }
 
 func TestIntegration_AutomaticEndpoints(t *testing.T) {
-	cp := crudp.NewDefault()
+	cp := NewTestCrudP()
 	cp.RegisterHandlers(&IntegrationUserHandler{})
 
 	mux := http.NewServeMux()

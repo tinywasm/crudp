@@ -34,7 +34,7 @@ func main() {
 	mux.Handle("/", noCache(fs))
 
 	// Initialize CRUDP directly
-	cp := crudp.NewDefault()
+	cp := crudp.New()
 	cp.RegisterHandlers(modules.Init()...)
 	cp.RegisterRoutes(mux)
 

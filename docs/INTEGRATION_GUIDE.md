@@ -167,7 +167,7 @@ func main() {
     mux := http.NewServeMux()
 
     // 1. Initialize CRUDP
-    cp := crudp.NewDefault()
+    cp := crudp.New()
     
     // 2. Register Handlers
     cp.RegisterHandlers(modules.Init()...)
@@ -196,7 +196,7 @@ import (
 
 func main() {
     // 1. Initialize CRUDP
-    cp := crudp.NewDefault()
+    cp := crudp.New()
     
     // 2. Register Handlers
     cp.RegisterHandlers(modules.Init()...)
@@ -213,4 +213,4 @@ func main() {
 - **📦 Decoupling**: Business modules don't import CRUDP.
 - **🔄 Isomorphic**: Same handler struct, different logic per platform using build tags.
 - **⚡ Automatic Routing**: RESTful endpoints generated from handler names.
-- **🛠️ Direct Initialization**: No complex boilerplates; just `NewDefault()` + `RegisterHandlers()`.
+- **🛠️ Direct Initialization**: No complex boilerplates; just `New()` + `RegisterHandlers()`.

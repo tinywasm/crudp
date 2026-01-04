@@ -73,7 +73,7 @@ func (h *Handler) Create(data ...any) any {
 ## Server Registration
 
 ```go
-cp := crudp.New(binary.Encode, binary.Decode)
+cp := crudp.New()
 cp.RegisterHandlers(&webhooks.Handler{})
 
 mux := http.NewServeMux()

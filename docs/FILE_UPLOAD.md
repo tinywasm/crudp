@@ -70,7 +70,7 @@ Registration is automatic. `RegisterRoutes` will create the `POST /files/{path..
 **File: `web/server.go`**
 ```go
 func main() {
-    cp := crudp.New(binary.Encode, binary.Decode)
+    cp := crudp.New()
     cp.RegisterHandlers(&files.Handler{})
     
     mux := http.NewServeMux()

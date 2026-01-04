@@ -21,7 +21,7 @@ var (
 // Returns the server URL.
 func SetupIntegrationServer() string {
 	integrationServerOnce.Do(func() {
-		cp := crudp.NewDefault()
+		cp := NewTestCrudP()
 		cp.RegisterHandlers(&SharedUserHandler{})
 
 		mux := http.NewServeMux()

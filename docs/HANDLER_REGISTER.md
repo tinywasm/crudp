@@ -100,7 +100,7 @@ type Validator interface {
 Use this method to register your handler instances. Order matters: the index in the slice becomes the `HandlerID` used in the protocol.
 
 ```go
-cp := crudp.New(binary.Encode, binary.Decode)
+cp := crudp.New()
 err := cp.RegisterHandlers(&UserHandler{}, &ProductHandler{})
 ```
 

@@ -1,9 +1,10 @@
-package crudp
+package crudp_test
 
 import (
 	"testing"
 
 	"github.com/tinywasm/binary"
+	"github.com/tinywasm/crudp"
 )
 
 // BenchUser is a simple structure for benchmarks
@@ -54,8 +55,8 @@ func (u *BenchUser) Delete(data ...any) any {
 
 // Global variables to prevent compiler optimizations
 var (
-	globalCrudP     *CrudP
-	globalBatchResp *BatchResponse
+	globalCrudP     *crudp.CrudP
+	globalBatchResp *crudp.BatchResponse
 	globalUser      = &BenchUser{
 		ID:    1,
 		Name:  "BenchUser",
@@ -66,13 +67,13 @@ var (
 
 // BenchmarkCrudPSetup measures allocations for CRUDP initialization
 func BenchmarkCrudPSetupShared(b *testing.B) {
-	var cp *CrudP
+	var cp *crudp.CrudP
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		cp = New(binary.Encode, binary.Decode)
+		cp = NewTestCrudP()
 		if err := cp.RegisterHandlers(&BenchUser{}); err != nil {
 			b.Fatalf("RegisterHandlers failed: %v", err)
 		}
@@ -83,20 +84,20 @@ func BenchmarkCrudPSetupShared(b *testing.B) {
 
 // BenchmarkCrudPExecute measures allocations for executing a batch request
 func BenchmarkCrudPExecuteShared(b *testing.B) {
-	cp := New(binary.Encode, binary.Decode)
+	cp := NewTestCrudP()
 	if err := cp.RegisterHandlers(&BenchUser{}); err != nil {
 		b.Fatalf("RegisterHandlers failed: %v", err)
 	}
 
 	var userData []byte
 	binary.Encode(globalUser, &userData)
-	req := &BatchRequest{
-		Packets: []Packet{
+	req := &crudp.BatchRequest{
+		Packets: []crudp.Packet{
 			{Action: 'c', HandlerID: 0, ReqID: "bench", Data: [][]byte{userData}},
 		},
 	}
 
-	var resp *BatchResponse
+	var resp *crudp.BatchResponse
 	var err error
 
 	b.ResetTimer()

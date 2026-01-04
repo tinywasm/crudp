@@ -6,7 +6,7 @@ import (
 )
 
 func NewTestCrudP() *crudp.CrudP {
-	return crudp.New(binary.Encode, binary.Decode)
+	return crudp.New()
 }
 
 func testEncode(data any) ([]byte, error) {

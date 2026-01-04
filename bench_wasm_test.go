@@ -1,6 +1,6 @@
 //go:build wasm
 
-package crudp
+package crudp_test
 
 import (
 	"testing"

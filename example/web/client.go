@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// Initialize CRUDP directly
-	cp := crudp.NewDefault()
+	cp := crudp.New()
 	cp.RegisterHandlers(modules.Init()...)
 
 	// Connect fetch responses to CRUDP handlers

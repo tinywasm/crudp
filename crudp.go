@@ -22,20 +22,21 @@ type CrudP struct {
 	log      func(...any) // Never nil - uses no-op by default
 }
 
-// New creates a new CrudP instance with custom serialization functions
-func New(encode, decode func(any, any) error) *CrudP {
+// New creates a new CrudP instance with binary codec by default
+func New() *CrudP {
 	cp := &CrudP{
-		encode: encode,
-		decode: decode,
+		encode: binary.Encode,
+		decode: binary.Decode,
 		log:    func(...any) {},
 	}
 
 	return cp
 }
 
-// NewDefault creates a CrudP instance using the recommended binary codec
-func NewDefault() *CrudP {
-	return New(binary.Encode, binary.Decode)
+// SetCodecs configures custom serialization functions
+func (cp *CrudP) SetCodecs(encode, decode func(any, any) error) {
+	cp.encode = encode
+	cp.decode = decode
 }
 
 // SetLog configures a custom logging function
