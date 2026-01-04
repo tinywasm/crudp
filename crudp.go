@@ -34,7 +34,7 @@ func New() *CrudP {
 }
 
 // SetCodecs configures custom serialization functions
-func (cp *CrudP) SetCodecs(encode, decode func(any, any) error) {
+func (cp *CrudP) SetCodecs(encode, decode func(input any, output any) error) {
 	cp.encode = encode
 	cp.decode = decode
 }
