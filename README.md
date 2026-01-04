@@ -13,32 +13,9 @@ A JSON/binary CRUD protocol for isomorphic Go applications. Limits its responsib
 - **Batch Processing:** Logic to execute multiple operations from a single request.
 - **TinyGo Compatible:** Optimized for small WASM binaries.
 
-## Quick Start
-
-### 1. Define a Handler
-
-```go
-type UserHandler struct{}
-
-func (h *UserHandler) Create(data ...any) any {
-    // Process data and return result (which can be an error)
-    return &User{ID: 1, Name: "John"}
-}
-```
-
-### 2. Register and Execute
-
-```go
-cp := crudp.New(binary.Encode, binary.Decode)
-cp.RegisterHandlers(&UserHandler{})
-
-// On server:
-// req, _ := decodeRequest(body)
-// resp, _ := cp.Execute(req)
-```
-
 ## Documentation
 
+- [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md): Step-by-step integration guide for Server and WASM
 - [`docs/INITIAL_VISION.md`](docs/INITIAL_VISION.md): Vision and design principles
 - [`docs/HANDLER_REGISTER.md`](docs/HANDLER_REGISTER.md): Handler interfaces and registration
 - [`docs/PACKET_STRUCTURE.md`](docs/PACKET_STRUCTURE.md): Protocol packet structures
