@@ -14,4 +14,8 @@ func TestCrudP_Stdlib(t *testing.T) {
 	t.Run("Logger", func(t *testing.T) {
 		LoggerConfigShared(t)
 	})
+
+	t.Run("CodecSwitch", func(t *testing.T) {
+		CodecSwitchShared(t)
+	})
 }

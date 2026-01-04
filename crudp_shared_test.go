@@ -37,14 +37,27 @@ func (u *User) Read(data ...any) any {
 }
 
 func CrudPBasicFunctionalityShared(t *testing.T) {
+	runBasicFunctionalTest(t, NewTestCrudP(), testEncodeBinary, testDecodeBinary)
+}
+
+func CodecSwitchShared(t *testing.T) {
+	t.Run("Binary (Default)", func(t *testing.T) {
+		runBasicFunctionalTest(t, NewTestCrudP(), testEncodeBinary, testDecodeBinary)
+	})
+
+	t.Run("JSON", func(t *testing.T) {
+		runBasicFunctionalTest(t, NewTestCrudPJSON(), testEncodeJSON, testDecodeJSON)
+	})
+}
+
+func runBasicFunctionalTest(t *testing.T, cp *crudp.CrudP, encode func(any) ([]byte, error), decode func([]byte, any) error) {
 	// Initialize CRUDP with handlers
-	cp := NewTestCrudP()
 	if err := cp.RegisterHandlers(&User{}); err != nil {
 		t.Fatalf("Failed to load handlers: %v", err)
 	}
 
 	// Test Create operation
-	userData, err := testEncode(&User{Name: "John", Email: "john@example.com"})
+	userData, err := encode(&User{Name: "John", Email: "john@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to encode user data: %v", err)
 	}
@@ -81,7 +94,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	var createdUser User
-	if err := testDecode(result.Data[0], &createdUser); err != nil {
+	if err := decode(result.Data[0], &createdUser); err != nil {
 		t.Fatalf("Failed to decode created user: %v", err)
 	}
 	if createdUser.ID != 123 {
@@ -89,7 +102,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	// Test Read operation
-	readUserData, err := testEncode(&User{ID: 123, Name: "John"})
+	readUserData, err := encode(&User{ID: 123, Name: "John"})
 	if err != nil {
 		t.Fatalf("Failed to encode read user data: %v", err)
 	}
@@ -126,7 +139,7 @@ func CrudPBasicFunctionalityShared(t *testing.T) {
 	}
 
 	var readUser User
-	if err := testDecode(result2.Data[0], &readUser); err != nil {
+	if err := decode(result2.Data[0], &readUser); err != nil {
 		t.Fatalf("Failed to decode read user: %v", err)
 	}
 	if readUser.Name != "Found John" {
