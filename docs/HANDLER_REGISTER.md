@@ -24,13 +24,8 @@ Entities implement one or more of the CRUD interfaces defined in [`interfaces.go
 **Security and Identification**: Every Entity that implements at least one CRUD operation **must** also implement:
 
 1.  **`NamedHandler`**: Provides the unique name.
-    ```go
-    func (u *User) HandlerName() string { return "users" }
-    ```
 2.  **`DataValidator`**: Validates data before the action.
-    ```go
-    func (u *User) ValidateData(action byte, data ...any) error { return nil }
-    ```
+3.  **[`AccessLevel`](./ACCESS_CONTROL.md)**: Defines hierarchical permissions.
 
 `RegisterHandlers` will return an error if a CRUD Entity is missing these implementations.
 

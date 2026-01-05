@@ -18,6 +18,7 @@ func (h *explicitNameHandler) Create(data ...any) any {
 	return ExplicitCreateResponse{Message: "created"}
 }
 func (h *explicitNameHandler) ValidateData(action byte, data ...any) error { return nil }
+func (h *explicitNameHandler) MinAccess(action byte) int                   { return 0 }
 
 // Test handler without explicit name (uses NamedHandler now)
 type UserController struct{}
@@ -42,6 +43,7 @@ func (h *UserController) Read(data ...any) any {
 	return ReadResponse{ID: 1, Name: "test"}
 }
 func (h *UserController) ValidateData(action byte, data ...any) error { return nil }
+func (h *UserController) MinAccess(action byte) int                   { return 0 }
 
 // Handler with validation
 type ValidatedHandler struct{}
@@ -62,6 +64,7 @@ func (h *ValidatedHandler) ValidateData(action byte, data ...any) error {
 	}
 	return nil
 }
+func (h *ValidatedHandler) MinAccess(action byte) int { return 0 }
 
 type errorString string
 
@@ -136,6 +139,13 @@ type missingValidatorHandler struct{}
 func (h *missingValidatorHandler) HandlerName() string  { return "missing_validator" }
 func (h *missingValidatorHandler) Read(data ...any) any { return nil }
 
+// Helper for Missing AccessLevel test
+type missingAccessHandler struct{}
+
+func (h *missingAccessHandler) HandlerName() string                         { return "missing_access" }
+func (h *missingAccessHandler) Read(data ...any) any                        { return nil }
+func (h *missingAccessHandler) ValidateData(action byte, data ...any) error { return nil }
+
 func HandlerRegistrationErrorsShared(t *testing.T, cp *crudp.CrudP) {
 	t.Run("Missing NamedHandler", func(t *testing.T) {
 		cp := NewTestCrudP()
@@ -155,6 +165,32 @@ func HandlerRegistrationErrorsShared(t *testing.T, cp *crudp.CrudP) {
 			t.Error("expected error for missing DataValidator")
 		} else {
 			expectedMsg := "missing interface: 'ValidateData"
+			if !contains(err.Error(), expectedMsg) {
+				t.Errorf("expected error containing %q, got %q", expectedMsg, err.Error())
+			}
+		}
+	})
+
+	t.Run("Missing AccessLevel", func(t *testing.T) {
+		cp := NewTestCrudP()
+		err := cp.RegisterHandlers(&missingAccessHandler{})
+		if err == nil {
+			t.Error("expected error for missing AccessLevel")
+		} else {
+			expectedMsg := "missing interface: 'MinAccess"
+			if !contains(err.Error(), expectedMsg) {
+				t.Errorf("expected error containing %q, got %q", expectedMsg, err.Error())
+			}
+		}
+	})
+
+	t.Run("Security Error: CRUD with no UserLevel configured", func(t *testing.T) {
+		cp := crudp.New() // NOT dev mode, NO UserLevel
+		err := cp.RegisterHandlers(&UserController{})
+		if err == nil {
+			t.Error("expected security error for missing UserLevel")
+		} else {
+			expectedMsg := "SetUserLevel() not configured"
 			if !contains(err.Error(), expectedMsg) {
 				t.Errorf("expected error containing %q, got %q", expectedMsg, err.Error())
 			}
@@ -192,6 +228,86 @@ func ModuleAddPatternShared(t *testing.T, cp *crudp.CrudP) {
 		}
 		if cp.GetHandlerName(1) != "user_controller" {
 			t.Errorf("expected handler 1 to be 'user_controller', got '%s'", cp.GetHandlerName(1))
+		}
+	})
+}
+
+// Handler with restricted access
+type RestrictedHandler struct{}
+
+func (h *RestrictedHandler) HandlerName() string                         { return "restricted" }
+func (h *RestrictedHandler) Read(data ...any) any                        { return "ok" }
+func (h *RestrictedHandler) ValidateData(action byte, data ...any) error { return nil }
+func (h *RestrictedHandler) MinAccess(action byte) int {
+	if action == 'r' {
+		return 100 // Requires level 100
+	}
+	return 255
+}
+
+func AccessControlShared(t *testing.T, cp *crudp.CrudP) {
+	t.Run("Access Granted", func(t *testing.T) {
+		cp := crudp.New()
+		cp.SetUserLevel(func(data ...any) int { return 100 })
+		cp.RegisterHandlers(&RestrictedHandler{})
+
+		_, err := cp.CallHandler(0, 'r')
+		if err != nil {
+			t.Errorf("expected access granted, got error: %v", err)
+		}
+	})
+
+	t.Run("Access Denied", func(t *testing.T) {
+		cp := crudp.New()
+		cp.SetUserLevel(func(data ...any) int { return 50 }) // Level 50 < 100
+		cp.RegisterHandlers(&RestrictedHandler{})
+
+		_, err := cp.CallHandler(0, 'r')
+		if err == nil {
+			t.Error("expected access denied error")
+		} else if !contains(err.Error(), "access denied") {
+			t.Errorf("expected 'access denied', got %q", err.Error())
+		}
+	})
+
+	t.Run("Access Denied Handler Callback", func(t *testing.T) {
+		cp := crudp.New()
+		cp.SetUserLevel(func(data ...any) int { return 10 })
+
+		notified := false
+		cp.SetAccessDeniedHandler(func(handler string, action byte, userLevel int, minRequired int) {
+			notified = true
+			if handler != "restricted" {
+				t.Errorf("unexpected handler: %s", handler)
+			}
+			if action != 'r' {
+				t.Errorf("unexpected action: %c", action)
+			}
+			if userLevel != 10 {
+				t.Errorf("unexpected userLevel: %d", userLevel)
+			}
+			if minRequired != 100 {
+				t.Errorf("unexpected minRequired: %d", minRequired)
+			}
+		})
+
+		cp.RegisterHandlers(&RestrictedHandler{})
+		_, _ = cp.CallHandler(0, 'r')
+
+		if !notified {
+			t.Error("AccessDeniedHandler was not called")
+		}
+	})
+
+	t.Run("DevMode Bypass", func(t *testing.T) {
+		cp := crudp.New()
+		cp.SetDevMode(true) // Should skip check
+		cp.RegisterHandlers(&RestrictedHandler{})
+
+		// Even with no UserLevel configured, it should work in DevMode
+		_, err := cp.CallHandler(0, 'r')
+		if err != nil {
+			t.Errorf("unexpected error in dev mode: %v", err)
 		}
 	})
 }

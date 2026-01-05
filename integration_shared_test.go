@@ -75,6 +75,7 @@ func (u *SharedUser) Delete(data ...any) any {
 }
 
 func (u *SharedUser) ValidateData(action byte, data ...any) error { return nil }
+func (u *SharedUser) MinAccess(action byte) int                   { return 0 }
 
 // Test all 4 CRUD operations via automatic endpoints
 func IntegrationAllCRUDOperationsShared(t *testing.T, serverURL string) {

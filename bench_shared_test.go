@@ -56,6 +56,7 @@ func (u *BenchUser) Delete(data ...any) any {
 }
 
 func (u *BenchUser) ValidateData(action byte, data ...any) error { return nil }
+func (u *BenchUser) MinAccess(action byte) int                   { return 0 }
 
 // Global variables to prevent compiler optimizations
 var (

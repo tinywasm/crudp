@@ -19,6 +19,7 @@ func (p *Patient) Read(data ...any) any {
 }
 
 func (p *Patient) ValidateData(action byte, data ...any) error { return nil }
+func (p *Patient) MinAccess(action byte) int                   { return 0 }
 
 // Add returns all entities from this module
 func Add() []any {

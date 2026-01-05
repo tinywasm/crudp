@@ -39,6 +39,7 @@ func (u *User) Read(data ...any) any {
 }
 
 func (u *User) ValidateData(action byte, data ...any) error { return nil }
+func (u *User) MinAccess(action byte) int                   { return 0 }
 
 func CrudPBasicFunctionalityShared(t *testing.T) {
 	runBasicFunctionalTest(t, NewTestCrudP(), testEncodeBinary, testDecodeBinary)
@@ -191,3 +192,4 @@ func (h *testLogHandler) Create(data ...any) any {
 }
 
 func (h *testLogHandler) ValidateData(action byte, data ...any) error { return nil }
+func (h *testLogHandler) MinAccess(action byte) int                   { return 0 }

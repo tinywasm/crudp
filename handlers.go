@@ -54,6 +54,19 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 				return Errf("missing interface: 'ValidateData(action byte, data ...any) error' for handler: %s", ah.name)
 			}
 
+			// Enforce AccessLevel
+			if access, ok := h.(AccessLevel); ok {
+				ah.MinAccess = access.MinAccess
+			} else {
+				return Errf("missing interface: 'MinAccess(action byte) int' for handler: %s", ah.name)
+			}
+
+			// Validate AllowedAccess doesn't return -1 or invalid for implemented actions
+			// Actually the plan says it must return non-nil if it was slice, but now it is int.
+			// For int, level 0 might be "no access".
+			// Let's check some actions to ensure it doesn't return something that means "not configured"
+			// but since it's an interface call, we'll just cache it.
+
 			// Cache the type for decode (Option A: Optimized Reflect)
 			t := reflect.TypeOf(h)
 			if t.Kind() == reflect.Ptr {
@@ -65,6 +78,21 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 		cp.handlers[i] = ah
 		if ah.name != "" {
 			cp.log("registered handler:", ah.name, "at index", i)
+		}
+	}
+
+	// Security: If CRUD handlers are registered but no UserLevel extractor is configured,
+	// and we are NOT in dev mode, it's a security risk.
+	if !cp.devMode && cp.getUserLevel == nil {
+		hasCRUD := false
+		for _, ah := range cp.handlers {
+			if ah.MinAccess != nil {
+				hasCRUD = true
+				break
+			}
+		}
+		if hasCRUD {
+			return Errf("security error: CRUD handlers registered but SetUserLevel() not configured")
 		}
 	}
 
@@ -87,7 +115,25 @@ func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, er
 
 	handler := cp.handlers[handlerID]
 
-	// Mandatory validation before executing
+	// 1. Access Control (first step)
+	if !cp.devMode && handler.MinAccess != nil {
+		userLevel := 0
+		if cp.getUserLevel != nil {
+			userLevel = cp.getUserLevel(data...)
+		}
+
+		minRequired := handler.MinAccess(action)
+		if userLevel < minRequired {
+			// Access denied
+			if cp.accessDeniedHandler != nil {
+				cp.accessDeniedHandler(handler.name, action, userLevel, minRequired)
+			}
+			cp.log("access denied for handler:", handler.name)
+			return nil, Errf("access denied")
+		}
+	}
+
+	// 2. Mandatory validation before executing
 	if handler.ValidateData != nil {
 		if err := handler.ValidateData(action, data...); err != nil {
 			return nil, err

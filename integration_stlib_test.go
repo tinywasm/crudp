@@ -47,6 +47,7 @@ func (u *IntegrationUser) Read(data ...any) any {
 }
 
 func (u *IntegrationUser) ValidateData(action byte, data ...any) error { return nil }
+func (u *IntegrationUser) MinAccess(action byte) int                   { return 0 }
 
 func TestIntegration_New(t *testing.T) {
 	// Test New uses binary codec by default

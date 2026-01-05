@@ -16,14 +16,21 @@ type actionHandler struct {
 	Update       func(data ...any) any
 	Delete       func(data ...any) any
 	ValidateData func(action byte, data ...any) error
+	MinAccess    func(action byte) int
 }
+
+// AccessDeniedHandler defines the callback for failed access attempts
+type AccessDeniedHandler func(handler string, action byte, userLevel int, minRequired int)
 
 // CrudP handles automatic handler processing
 type CrudP struct {
-	encode   func(input any, output any) error
-	decode   func(input any, output any) error
-	handlers []actionHandler
-	log      func(...any) // Never nil - uses no-op by default
+	encode              func(input any, output any) error
+	decode              func(input any, output any) error
+	handlers            []actionHandler
+	log                 func(...any) // Never nil - uses no-op by default
+	devMode             bool
+	getUserLevel        func(data ...any) int
+	accessDeniedHandler AccessDeniedHandler
 }
 
 // New creates a new CrudP instance with binary codec by default
@@ -50,4 +57,19 @@ func (cp *CrudP) SetLog(log func(...any)) {
 		return
 	}
 	cp.log = log
+}
+
+// SetDevMode enables or disables development mode (bypasses access checks)
+func (cp *CrudP) SetDevMode(enabled bool) {
+	cp.devMode = enabled
+}
+
+// SetUserLevel configures the function to extract the current user's access level
+func (cp *CrudP) SetUserLevel(fn func(data ...any) int) {
+	cp.getUserLevel = fn
+}
+
+// SetAccessDeniedHandler configures a callback for failed access attempts
+func (cp *CrudP) SetAccessDeniedHandler(fn AccessDeniedHandler) {
+	cp.accessDeniedHandler = fn
 }

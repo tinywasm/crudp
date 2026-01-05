@@ -15,16 +15,20 @@ import (
     "net/http"
 )
 
-type Handler struct{}
-
-func (h *Handler) HandlerName() string { return "webhooks" }
-
+// WebhookEvent is the entity for webhook handling
 type WebhookEvent struct {
     Type string          `json:"type"`
     Data json.RawMessage `json:"data"`
 }
 
-func (h *Handler) Create(data ...any) any {
+func (w *WebhookEvent) HandlerName() string { return "webhooks" }
+
+func (w *WebhookEvent) ValidateData(action byte, data ...any) error { return nil }
+
+// Access control (see [ACCESS_CONTROL.md](./ACCESS_CONTROL.md))
+func (w *WebhookEvent) MinAccess(action byte) int { return 0 } // Generic webhooks are usually public
+
+func (w *WebhookEvent) Create(data ...any) any {
     var provider string
     var r *http.Request
 
@@ -58,7 +62,7 @@ func (h *Handler) Create(data ...any) any {
     var event WebhookEvent
     json.Unmarshal(body, &event)
 
-    return h.handleEvent(provider, event)
+    return handleEvent(provider, event)
 }
 ```
 
@@ -74,7 +78,7 @@ func (h *Handler) Create(data ...any) any {
 
 ```go
 cp := crudp.New()
-cp.RegisterHandlers(&webhooks.Handler{})
+cp.RegisterHandlers(&webhooks.WebhookEvent{})
 
 mux := http.NewServeMux()
 cp.RegisterRoutes(mux) // Registers POST /webhooks/{path...}

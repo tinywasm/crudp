@@ -43,6 +43,13 @@ func (u *User) HandlerName() string { return "users" }
 func (u *User) ValidateData(action byte, data ...any) error {
     return nil // Implement logic here
 }
+
+// Mandatory: All CRUD entities must implement AccessLevel
+// See [Access Control Guide](./ACCESS_CONTROL.md)
+func (u *User) MinAccess(action byte) int {
+    if action == 'r' { return 1 } // Read requires level 1
+    return 2 // Write requires level 2
+}
 ```
 
 ### 2. Implement Backend Logic
@@ -184,10 +191,15 @@ func main() {
     // 1. Initialize CRUDP
     cp := crudp.New()
     
-    // 2. Register Handlers
+    // 2. Configure Access Control (see [Access Control Guide](./ACCESS_CONTROL.md))
+    cp.SetUserLevel(func(data ...any) int {
+        return 1 // Implement logic to extract level from context/request
+    })
+
+    // 3. Register Handlers
     cp.RegisterHandlers(modules.Init()...)
     
-    // 3. Expose automatic endpoints
+    // 4. Expose automatic endpoints
     cp.RegisterRoutes(mux) 
     
     http.ListenAndServe(":8080", mux)

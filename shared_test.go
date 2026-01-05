@@ -8,11 +8,14 @@ import (
 )
 
 func NewTestCrudP() *crudp.CrudP {
-	return crudp.New()
+	cp := crudp.New()
+	cp.SetDevMode(true)
+	return cp
 }
 
 func NewTestCrudPJSON() *crudp.CrudP {
 	cp := crudp.New()
+	cp.SetDevMode(true)
 	cp.SetCodecs(jsonEncode, jsonDecode)
 	return cp
 }

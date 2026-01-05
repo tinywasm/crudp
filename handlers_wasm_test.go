@@ -17,6 +17,7 @@ func TestHandlers_WASM(t *testing.T) {
 
 	t.Run("Validation", func(t *testing.T) {
 		HandlerValidationShared(t, cp)
+		AccessControlShared(t, cp)
 	})
 
 	t.Run("CRUD", func(t *testing.T) {
