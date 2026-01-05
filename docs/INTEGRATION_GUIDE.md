@@ -21,25 +21,28 @@ myProject/
 
 ## Implementation Steps
 
-### 1. Define Shared Model and Handler
+### 1. Define Shared Entity
 
-Keep the model and handler struct in a file without build tags.
+In CRUDP, your data model (Entity) is also your handler. This simplifies the design and ensures consistency.
 
 **File: `modules/users/user.go`**
 ```go
 package user
 
-// User is the shared model between backend and frontend
+// User is the shared entity between backend and frontend
 type User struct {
     ID    int    
     Name  string 
     Email string
 }
 
-// Handler implements CRUD operations for users
-type Handler struct{}
+// Mandatory: Unique name for registration (Entity = Handler)
+func (u *User) HandlerName() string { return "users" }
 
-func (h *Handler) HandlerName() string { return "users" }
+// Mandatory: All CRUD entities must implement DataValidator
+func (u *User) ValidateData(action byte, data ...any) error {
+    return nil // Implement logic here
+}
 ```
 
 ### 2. Implement Backend Logic
@@ -129,21 +132,33 @@ func renderUserItem(u *User) string {
 }
 ```
 
-### 4. Collect Modules (Dependency Injection)
+### 4. Collect Modules
 
-Use this file to instantiate handlers and inject any required dependencies (DB, services).
+Each module exposes an `Add()` function returning its entities. Use `slices.Concat` to collect all.
+
+**File: `modules/user/user.go`** (add at end)
+```go
+// Add returns all entities from this module
+func Add() []any {
+    return []any{&User{}}
+}
+```
 
 **File: `modules/modules.go`**
 ```go
 package modules
 
-import "myProject/modules/user"
+import (
+    "myProject/modules/user"
+    "myProject/modules/patient"
+)
 
+// Init collects all entities from all modules
 func Init() []any {
-    return []any{
-        &user.Handler{},
-        // Add other handlers here...
-    }
+    return append(
+        user.Add(),
+        patient.Add()...,
+    )
 }
 ```
 

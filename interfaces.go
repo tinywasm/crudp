@@ -18,13 +18,12 @@ type Deleter interface {
 	Delete(data ...any) any
 }
 
-// NamedHandler allows override of automatic name (optional)
-// If not implemented, reflection is used: TypeName -> snake_case
+// NamedHandler provides the unique name for the entity (required if CRUD implemented)
 type NamedHandler interface {
 	HandlerName() string
 }
 
-// Validator validates complete data before action (optional)
-type Validator interface {
-	Validate(action byte, data ...any) error
+// DataValidator validates complete data before action (required if CRUD implemented)
+type DataValidator interface {
+	ValidateData(action byte, data ...any) error
 }

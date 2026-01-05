@@ -20,11 +20,9 @@ type IntegrationUser struct {
 	Email string `json:"email"`
 }
 
-type IntegrationUserHandler struct{}
+func (u *IntegrationUser) HandlerName() string { return "users" }
 
-func (h *IntegrationUserHandler) HandlerName() string { return "users" }
-
-func (h *IntegrationUserHandler) Create(data ...any) any {
+func (u *IntegrationUser) Create(data ...any) any {
 	for _, item := range data {
 		switch v := item.(type) {
 		case *IntegrationUser:
@@ -35,7 +33,7 @@ func (h *IntegrationUserHandler) Create(data ...any) any {
 	return nil
 }
 
-func (h *IntegrationUserHandler) Read(data ...any) any {
+func (u *IntegrationUser) Read(data ...any) any {
 	for _, item := range data {
 		switch v := item.(type) {
 		case string:
@@ -48,6 +46,8 @@ func (h *IntegrationUserHandler) Read(data ...any) any {
 	return nil
 }
 
+func (u *IntegrationUser) ValidateData(action byte, data ...any) error { return nil }
+
 func TestIntegration_New(t *testing.T) {
 	// Test New uses binary codec by default
 	cp := NewTestCrudP()
@@ -55,7 +55,7 @@ func TestIntegration_New(t *testing.T) {
 		t.Fatal("New returned nil")
 	}
 
-	err := cp.RegisterHandlers(&IntegrationUserHandler{})
+	err := cp.RegisterHandlers(&IntegrationUser{})
 	if err != nil {
 		t.Fatalf("RegisterHandlers failed: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestIntegration_New(t *testing.T) {
 
 func TestIntegration_AutomaticEndpoints(t *testing.T) {
 	cp := NewTestCrudP()
-	cp.RegisterHandlers(&IntegrationUserHandler{})
+	cp.RegisterHandlers(&IntegrationUser{})
 
 	mux := http.NewServeMux()
 	cp.RegisterRoutes(mux)

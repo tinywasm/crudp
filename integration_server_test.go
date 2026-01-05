@@ -22,7 +22,7 @@ var (
 func SetupIntegrationServer() string {
 	integrationServerOnce.Do(func() {
 		cp := NewTestCrudP()
-		cp.RegisterHandlers(&SharedUserHandler{})
+		cp.RegisterHandlers(&SharedUser{})
 
 		mux := http.NewServeMux()
 		cp.RegisterRoutes(mux)

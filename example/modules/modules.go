@@ -5,10 +5,10 @@ import (
 	"github.com/tinywasm/crudp/example/modules/user"
 )
 
-// Init returns all business modules
+// Init collects all entities from all modules
 func Init() []any {
-	return []any{
-		&user.Handler{},
-		&patient.Handler{},
-	}
+	return append(
+		user.Add(),
+		patient.Add()...,
+	)
 }

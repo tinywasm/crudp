@@ -15,6 +15,8 @@ type BenchUser struct {
 	Age   uint8
 }
 
+func (u *BenchUser) HandlerName() string { return "bench_users" }
+
 func (u *BenchUser) Create(data ...any) any {
 	created := make([]*BenchUser, 0, len(data))
 	for _, item := range data {
@@ -52,6 +54,8 @@ func (u *BenchUser) Update(data ...any) any {
 func (u *BenchUser) Delete(data ...any) any {
 	return len(data)
 }
+
+func (u *BenchUser) ValidateData(action byte, data ...any) error { return nil }
 
 // Global variables to prevent compiler optimizations
 var (

@@ -1,17 +1,21 @@
 package crudp
 
 import (
+	"reflect"
+
 	"github.com/tinywasm/binary"
 )
 
 type actionHandler struct {
-	name    string
-	index   uint8
-	handler any
-	Create  func(data ...any) any
-	Read    func(data ...any) any
-	Update  func(data ...any) any
-	Delete  func(data ...any) any
+	name         string
+	index        uint8
+	handler      any
+	dataType     reflect.Type
+	Create       func(data ...any) any
+	Read         func(data ...any) any
+	Update       func(data ...any) any
+	Delete       func(data ...any) any
+	ValidateData func(action byte, data ...any) error
 }
 
 // CrudP handles automatic handler processing

@@ -19,7 +19,7 @@ var users = []*User{
 var nextID = 4
 
 // Create handles user creation (server-side)
-func (h *Handler) Create(data ...any) any {
+func (u *User) Create(data ...any) any {
 	for _, item := range data {
 		switch v := item.(type) {
 		case *context.Context:
@@ -39,7 +39,7 @@ func (h *Handler) Create(data ...any) any {
 }
 
 // Read handles user retrieval (server-side)
-func (h *Handler) Read(data ...any) any {
+func (u *User) Read(data ...any) any {
 	for _, item := range data {
 		if path, ok := item.(string); ok {
 			if path == "" {
@@ -59,7 +59,7 @@ func (h *Handler) Read(data ...any) any {
 }
 
 // Update handles user modification (server-side)
-func (h *Handler) Update(data ...any) any {
+func (u *User) Update(data ...any) any {
 	var targetID string
 	var updateData *User
 
@@ -85,7 +85,7 @@ func (h *Handler) Update(data ...any) any {
 }
 
 // Delete handles user removal (server-side)
-func (h *Handler) Delete(data ...any) any {
+func (u *User) Delete(data ...any) any {
 	for _, item := range data {
 		if path, ok := item.(string); ok {
 			for i, u := range users {

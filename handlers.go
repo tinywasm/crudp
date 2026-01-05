@@ -6,24 +6,6 @@ import (
 	. "github.com/tinywasm/fmt"
 )
 
-// getHandlerName gets the handler name
-// Priority: 1) HandlerName() if implemented, 2) reflection + snake_case
-func getHandlerName(handler any) string {
-	// First try NamedHandler interface
-	if named, ok := handler.(NamedHandler); ok {
-		return named.HandlerName()
-	}
-
-	// Fallback: use reflection and convert to snake_case
-	t := reflect.TypeOf(handler)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	// Use tinystring.SnakeLow for conversion
-	return Convert(t.Name()).SnakeLow().String()
-}
-
 // RegisterHandlers prepares the shared handler table
 func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 	cp.handlers = make([]actionHandler, len(handlers))
@@ -33,18 +15,57 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 			return Errf("handler %d is nil", i)
 		}
 
-		// Get name (via interface or reflection)
-		name := getHandlerName(h)
-
-		cp.handlers[i] = actionHandler{
-			name:    name,
+		ah := actionHandler{
 			index:   uint8(i),
 			handler: h,
 		}
 
-		cp.bind(uint8(i), h)
+		// Bind CRUD methods and track if any are implemented
+		hasCRUD := false
+		if creator, ok := h.(Creator); ok {
+			ah.Create = creator.Create
+			hasCRUD = true
+		}
+		if reader, ok := h.(Reader); ok {
+			ah.Read = reader.Read
+			hasCRUD = true
+		}
+		if updater, ok := h.(Updater); ok {
+			ah.Update = updater.Update
+			hasCRUD = true
+		}
+		if deleter, ok := h.(Deleter); ok {
+			ah.Delete = deleter.Delete
+			hasCRUD = true
+		}
 
-		cp.log("registered handler:", name, "at index", i)
+		if hasCRUD {
+			// Enforce NamedHandler
+			named, ok := h.(NamedHandler)
+			if !ok {
+				return Errf("missing interface: 'HandlerName() string' for handler at index %d", i)
+			}
+			ah.name = named.HandlerName()
+
+			// Enforce DataValidator
+			if validator, ok := h.(DataValidator); ok {
+				ah.ValidateData = validator.ValidateData
+			} else {
+				return Errf("missing interface: 'ValidateData(action byte, data ...any) error' for handler: %s", ah.name)
+			}
+
+			// Cache the type for decode (Option A: Optimized Reflect)
+			t := reflect.TypeOf(h)
+			if t.Kind() == reflect.Ptr {
+				t = t.Elem()
+			}
+			ah.dataType = t
+		}
+
+		cp.handlers[i] = ah
+		if ah.name != "" {
+			cp.log("registered handler:", ah.name, "at index", i)
+		}
 	}
 
 	return nil
@@ -58,22 +79,6 @@ func (cp *CrudP) GetHandlerName(handlerID uint8) string {
 	return cp.handlers[handlerID].name
 }
 
-// bind copies the CRUD functions without dynamic allocations
-func (cp *CrudP) bind(index uint8, handler any) {
-	if creator, ok := handler.(Creator); ok {
-		cp.handlers[index].Create = creator.Create
-	}
-	if reader, ok := handler.(Reader); ok {
-		cp.handlers[index].Read = reader.Read
-	}
-	if updater, ok := handler.(Updater); ok {
-		cp.handlers[index].Update = updater.Update
-	}
-	if deleter, ok := handler.(Deleter); ok {
-		cp.handlers[index].Delete = deleter.Delete
-	}
-}
-
 // CallHandler searches and calls the handler directly by shared index
 func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, error) {
 	if int(handlerID) >= len(cp.handlers) {
@@ -82,9 +87,9 @@ func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, er
 
 	handler := cp.handlers[handlerID]
 
-	// Optional validation before executing
-	if validator, ok := handler.handler.(Validator); ok {
-		if err := validator.Validate(action, data...); err != nil {
+	// Mandatory validation before executing
+	if handler.ValidateData != nil {
+		if err := handler.ValidateData(action, data...); err != nil {
 			return nil, err
 		}
 	}
@@ -138,29 +143,15 @@ func (cp *CrudP) decodeWithKnownType(p *Packet, handlerID uint8) ([]any, error) 
 		return nil, Errf("no handler found for id: %d", handlerID)
 	}
 
-	handler := cp.handlers[handlerID].handler
-	if handler == nil {
-		return cp.decodeWithRawBytes(p)
-	}
-
-	handlerValue := reflect.ValueOf(handler)
-	handlerType := handlerValue.Type()
-
-	var concreteType reflect.Type
-	if handlerType.Kind() == reflect.Ptr {
-		concreteType = handlerType.Elem()
-	} else {
-		concreteType = handlerType
-	}
-
-	if concreteType == nil {
+	handler := cp.handlers[handlerID]
+	if handler.dataType == nil {
 		return cp.decodeWithRawBytes(p)
 	}
 
 	decodedData := make([]any, 0, len(p.Data))
 	for _, itemBytes := range p.Data {
-		// New instance for each item
-		targetPtr := reflect.New(concreteType).Interface()
+		// New instance for each item using CACHED type
+		targetPtr := reflect.New(handler.dataType).Interface()
 
 		if cp.decode == nil {
 			return nil, Errf("decode function not configured")

@@ -7,7 +7,11 @@ type User struct {
 	Email string `json:"email"`
 }
 
-// Handler implements CRUD operations for users
-type Handler struct{}
+func (u *User) HandlerName() string { return "users" }
 
-func (h *Handler) HandlerName() string { return "users" }
+func (u *User) ValidateData(action byte, data ...any) error { return nil }
+
+// Add returns all entities from this module
+func Add() []any {
+	return []any{&User{}}
+}

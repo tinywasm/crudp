@@ -3,7 +3,7 @@
 package user
 
 // Create updates local state when server confirms creation
-func (h *Handler) Create(data ...any) any {
+func (u *User) Create(data ...any) any {
 	for _, item := range data {
 		if u, ok := item.(*User); ok {
 			// Update local state, DOM, etc.
@@ -15,7 +15,7 @@ func (h *Handler) Create(data ...any) any {
 }
 
 // Read updates UI with received users
-func (h *Handler) Read(data ...any) any {
+func (u *User) Read(data ...any) any {
 	for _, item := range data {
 		switch v := item.(type) {
 		case *User:
@@ -32,7 +32,7 @@ func (h *Handler) Read(data ...any) any {
 }
 
 // Update updates local state after server confirms update
-func (h *Handler) Update(data ...any) any {
+func (u *User) Update(data ...any) any {
 	for _, item := range data {
 		if u, ok := item.(*User); ok {
 			// Update DOM element for this user
@@ -44,7 +44,7 @@ func (h *Handler) Update(data ...any) any {
 }
 
 // Delete removes element from DOM after server confirms
-func (h *Handler) Delete(data ...any) any {
+func (u *User) Delete(data ...any) any {
 	/* 	for _, item := range data {
 		if path, ok := item.(string); ok {
 			// Remove from DOM

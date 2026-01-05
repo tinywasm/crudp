@@ -17,22 +17,19 @@ type SharedUser struct {
 	Email string `json:"email"`
 }
 
-// SharedUserHandler for integration tests - implements all 4 CRUD methods
-type SharedUserHandler struct{}
+func (u *SharedUser) HandlerName() string { return "users" }
 
-func (h *SharedUserHandler) HandlerName() string { return "users" }
-
-func (h *SharedUserHandler) Create(data ...any) any {
+func (u *SharedUser) Create(data ...any) any {
 	for _, item := range data {
-		if u, ok := item.(*SharedUser); ok {
-			u.ID = 999
-			return u
+		if user, ok := item.(*SharedUser); ok {
+			user.ID = 999
+			return user
 		}
 	}
 	return nil
 }
 
-func (h *SharedUserHandler) Read(data ...any) any {
+func (u *SharedUser) Read(data ...any) any {
 	// Mock database
 	users := []*SharedUser{
 		{ID: 1, Name: "Alice"},
@@ -58,17 +55,17 @@ func (h *SharedUserHandler) Read(data ...any) any {
 	return nil
 }
 
-func (h *SharedUserHandler) Update(data ...any) any {
+func (u *SharedUser) Update(data ...any) any {
 	for _, item := range data {
-		if u, ok := item.(*SharedUser); ok {
-			u.Name = "Updated: " + u.Name
-			return u
+		if user, ok := item.(*SharedUser); ok {
+			user.Name = "Updated: " + user.Name
+			return user
 		}
 	}
 	return nil
 }
 
-func (h *SharedUserHandler) Delete(data ...any) any {
+func (u *SharedUser) Delete(data ...any) any {
 	for _, item := range data {
 		if path, ok := item.(string); ok {
 			return "Deleted: " + path
@@ -76,6 +73,8 @@ func (h *SharedUserHandler) Delete(data ...any) any {
 	}
 	return "deleted"
 }
+
+func (u *SharedUser) ValidateData(action byte, data ...any) error { return nil }
 
 // Test all 4 CRUD operations via automatic endpoints
 func IntegrationAllCRUDOperationsShared(t *testing.T, serverURL string) {

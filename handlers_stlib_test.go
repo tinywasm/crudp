@@ -11,6 +11,8 @@ func TestHandlers_Stdlib(t *testing.T) {
 
 	t.Run("Registration", func(t *testing.T) {
 		HandlerRegistrationShared(t, cp)
+		HandlerRegistrationErrorsShared(t, cp)
+		ModuleAddPatternShared(t, cp)
 	})
 
 	t.Run("Validation", func(t *testing.T) {

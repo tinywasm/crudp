@@ -17,9 +17,12 @@ func (h *explicitNameHandler) HandlerName() string { return "my_custom_name" }
 func (h *explicitNameHandler) Create(data ...any) any {
 	return ExplicitCreateResponse{Message: "created"}
 }
+func (h *explicitNameHandler) ValidateData(action byte, data ...any) error { return nil }
 
-// Test handler without explicit name (uses reflection)
+// Test handler without explicit name (uses NamedHandler now)
 type UserController struct{}
+
+func (h *UserController) HandlerName() string { return "user_controller" }
 
 type CreateResponse struct {
 	ID     int    `json:"id"`
@@ -38,9 +41,12 @@ func (h *UserController) Create(data ...any) any {
 func (h *UserController) Read(data ...any) any {
 	return ReadResponse{ID: 1, Name: "test"}
 }
+func (h *UserController) ValidateData(action byte, data ...any) error { return nil }
 
 // Handler with validation
 type ValidatedHandler struct{}
+
+func (h *ValidatedHandler) HandlerName() string { return "validated_handler" }
 
 type ValidatedCreateResponse struct {
 	Message string `json:"message"`
@@ -50,7 +56,7 @@ func (h *ValidatedHandler) Create(data ...any) any {
 	return ValidatedCreateResponse{Message: "validated_created"}
 }
 
-func (h *ValidatedHandler) Validate(action byte, data ...any) error {
+func (h *ValidatedHandler) ValidateData(action byte, data ...any) error {
 	if len(data) == 0 {
 		return errorString("no data provided")
 	}
@@ -76,7 +82,7 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 		}
 	})
 
-	t.Run("Reflection Name (snake_case)", func(t *testing.T) {
+	t.Run("Reflection fallback removed (NamedHandler required)", func(t *testing.T) {
 		cp := NewTestCrudP()
 		err := cp.RegisterHandlers(&UserController{})
 		if err != nil {
@@ -116,6 +122,76 @@ func HandlerRegistrationShared(t *testing.T, cp *crudp.CrudP) {
 		}
 		if cp.GetHandlerName(2) != "validated_handler" {
 			t.Error("handler 2 name mismatch")
+		}
+	})
+
+	t.Run("Missing DataValidator Error", func(t *testing.T) {
+		// Handled in HandlerRegistrationErrorsShared
+	})
+}
+
+// Helper for Missing DataValidator test
+type missingValidatorHandler struct{}
+
+func (h *missingValidatorHandler) HandlerName() string  { return "missing_validator" }
+func (h *missingValidatorHandler) Read(data ...any) any { return nil }
+
+func HandlerRegistrationErrorsShared(t *testing.T, cp *crudp.CrudP) {
+	t.Run("Missing NamedHandler", func(t *testing.T) {
+		cp := NewTestCrudP()
+
+		type ReaderOnly struct{ crudp.Reader }
+		// Registering a struct that implements Reader but NOT NamedHandler should fail
+		err := cp.RegisterHandlers(&ReaderOnly{})
+		if err == nil {
+			t.Error("expected error for missing NamedHandler")
+		}
+	})
+
+	t.Run("Missing DataValidator", func(t *testing.T) {
+		cp := NewTestCrudP()
+		err := cp.RegisterHandlers(&missingValidatorHandler{})
+		if err == nil {
+			t.Error("expected error for missing DataValidator")
+		} else {
+			expectedMsg := "missing interface: 'ValidateData"
+			if !contains(err.Error(), expectedMsg) {
+				t.Errorf("expected error containing %q, got %q", expectedMsg, err.Error())
+			}
+		}
+	})
+}
+
+func contains(s, substr string) bool {
+	for i := 0; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// Test the module Add() pattern works with RegisterHandlers
+func ModuleAddPatternShared(t *testing.T, cp *crudp.CrudP) {
+	t.Run("Module Add Pattern", func(t *testing.T) {
+		cp := NewTestCrudP()
+
+		// Simulates the Add() pattern from modules
+		module1 := func() []any { return []any{&explicitNameHandler{}} }
+		module2 := func() []any { return []any{&UserController{}} }
+
+		all := append(module1(), module2()...)
+
+		err := cp.RegisterHandlers(all...)
+		if err != nil {
+			t.Fatalf("RegisterHandlers failed with Add pattern: %v", err)
+		}
+
+		if cp.GetHandlerName(0) != "my_custom_name" {
+			t.Errorf("expected handler 0 to be 'my_custom_name', got '%s'", cp.GetHandlerName(0))
+		}
+		if cp.GetHandlerName(1) != "user_controller" {
+			t.Errorf("expected handler 1 to be 'user_controller', got '%s'", cp.GetHandlerName(1))
 		}
 	})
 }

@@ -13,6 +13,8 @@ type User struct {
 	Email string
 }
 
+func (u *User) HandlerName() string { return "users" }
+
 func (u *User) Create(data ...any) any {
 	created := make([]*User, 0, len(data))
 	for _, item := range data {
@@ -35,6 +37,8 @@ func (u *User) Read(data ...any) any {
 	}
 	return results
 }
+
+func (u *User) ValidateData(action byte, data ...any) error { return nil }
 
 func CrudPBasicFunctionalityShared(t *testing.T) {
 	runBasicFunctionalTest(t, NewTestCrudP(), testEncodeBinary, testDecodeBinary)
@@ -178,9 +182,12 @@ func LoggerConfigShared(t *testing.T) {
 		cp.SetLog(nil)
 	})
 }
+func (h *testLogHandler) HandlerName() string { return "test_log" }
 
 type testLogHandler struct{}
 
 func (h *testLogHandler) Create(data ...any) any {
 	return "ok"
 }
+
+func (h *testLogHandler) ValidateData(action byte, data ...any) error { return nil }
