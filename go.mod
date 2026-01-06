@@ -8,3 +8,5 @@ require (
 	github.com/tinywasm/fetch v0.1.15
 	github.com/tinywasm/fmt v0.13.0
 )
+
+require github.com/tinywasm/dom v0.0.7

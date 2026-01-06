@@ -35,6 +35,12 @@ func main() {
 
 	// Initialize CRUDP directly
 	cp := crudp.New()
+
+	// Configure Access Control (see ACCESS_CONTROL.md)
+	cp.SetUserRoles(func(data ...any) []byte {
+		return []byte{'*'} // Any authenticated user
+	})
+
 	cp.RegisterHandlers(modules.Init()...)
 	cp.RegisterRoutes(mux)
 

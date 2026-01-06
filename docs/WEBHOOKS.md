@@ -26,7 +26,7 @@ func (w *WebhookEvent) HandlerName() string { return "webhooks" }
 func (w *WebhookEvent) ValidateData(action byte, data ...any) error { return nil }
 
 // Access control (see [ACCESS_CONTROL.md](./ACCESS_CONTROL.md))
-func (w *WebhookEvent) MinAccess(action byte) int { return 0 } // Generic webhooks are usually public
+func (w *WebhookEvent) AllowedRoles(action byte) []byte { return []byte{'*'} } // Webhooks from any authenticated source
 
 func (w *WebhookEvent) Create(data ...any) any {
     var provider string
