@@ -16,6 +16,7 @@ A JSON/binary CRUD protocol for isomorphic Go applications. Limits its responsib
 ## Documentation
 
 - [`docs/INTEGRATION_GUIDE.md`](docs/INTEGRATION_GUIDE.md): Step-by-step integration guide for Server and WASM
+- [`docs/ACCESS_CONTROL.md`](docs/ACCESS_CONTROL.md): Role-based access control (RBAC) configuration
 - [`docs/INITIAL_VISION.md`](docs/INITIAL_VISION.md): Vision and design principles
 - [`docs/HANDLER_REGISTER.md`](docs/HANDLER_REGISTER.md): Handler interfaces and registration
 - [`docs/PACKET_STRUCTURE.md`](docs/PACKET_STRUCTURE.md): Protocol packet structures

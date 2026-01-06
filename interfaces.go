@@ -28,7 +28,7 @@ type DataValidator interface {
 	ValidateData(action byte, data ...any) error
 }
 
-// AccessLevel defines hierarchical access control (required if CRUD implemented)
+// AccessLevel defines role-based access control (required if CRUD implemented)
 type AccessLevel interface {
-	MinAccess(action byte) int
+	AllowedRoles(action byte) []byte
 }

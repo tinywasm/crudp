@@ -15,8 +15,12 @@ type MiddlewareProvider interface {
 	Middleware(next http.Handler) http.Handler
 }
 
-// RegisterRoutes registers endpoints for each handler and a global /batch endpoint
 func (cp *CrudP) RegisterRoutes(mux *http.ServeMux) {
+	// Enable access check when routes are registered
+	cp.accessCheck = func(h actionHandler, a byte, d ...any) error {
+		return cp.doAccessCheck(h, a, d...)
+	}
+
 	// 1. Register global batch endpoint
 	mux.HandleFunc("POST /batch", cp.handleBatch)
 
@@ -183,4 +187,49 @@ func (cp *CrudP) encodeBody(data any) ([]byte, error) {
 		return nil, err
 	}
 	return encoded, nil
+}
+
+// doAccessCheck performs the actual access validation (server-side only)
+func (cp *CrudP) doAccessCheck(handler actionHandler, action byte, data ...any) error {
+	if cp.devMode || handler.AllowedRoles == nil {
+		return nil
+	}
+
+	var userRoles []byte
+	if cp.getUserRoles != nil {
+		userRoles = cp.getUserRoles(data...)
+	}
+
+	allowedRoles := handler.AllowedRoles(action)
+	if !hasAnyRole(userRoles, allowedRoles) {
+		// Access denied
+		errMsg := Fmt("required roles %q, user has %q", allowedRoles, userRoles)
+		if cp.accessDeniedHandler != nil {
+			cp.accessDeniedHandler(handler.name, action, userRoles, allowedRoles, errMsg)
+		}
+		cp.log("access denied for handler:", handler.name)
+		return Errf("access denied")
+	}
+
+	return nil
+}
+
+// hasAnyRole checks if user has at least one of the allowed roles (OR logic)
+// Special case: '*' means any authenticated user (any non-empty userRoles)
+func hasAnyRole(userRoles, allowedRoles []byte) bool {
+	if len(allowedRoles) == 0 {
+		return false // Security-by-default (already checked in registration, but just in case)
+	}
+
+	for _, allowed := range allowedRoles {
+		if allowed == '*' && len(userRoles) > 0 {
+			return true
+		}
+		for _, user := range userRoles {
+			if allowed == user {
+				return true
+			}
+		}
+	}
+	return false
 }

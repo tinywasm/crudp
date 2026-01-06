@@ -16,11 +16,11 @@ type actionHandler struct {
 	Update       func(data ...any) any
 	Delete       func(data ...any) any
 	ValidateData func(action byte, data ...any) error
-	MinAccess    func(action byte) int
+	AllowedRoles func(action byte) []byte
 }
 
 // AccessDeniedHandler defines the callback for failed access attempts
-type AccessDeniedHandler func(handler string, action byte, userLevel int, minRequired int)
+type AccessDeniedHandler func(handler string, action byte, userRoles []byte, allowedRoles []byte, errMsg string)
 
 // CrudP handles automatic handler processing
 type CrudP struct {
@@ -29,16 +29,21 @@ type CrudP struct {
 	handlers            []actionHandler
 	log                 func(...any) // Never nil - uses no-op by default
 	devMode             bool
-	getUserLevel        func(data ...any) int
+	getUserRoles        func(data ...any) []byte
 	accessDeniedHandler AccessDeniedHandler
+	accessCheck         func(handler actionHandler, action byte, data ...any) error
 }
+
+// noOpAccessCheck is a default no-op access validation
+func noOpAccessCheck(actionHandler, byte, ...any) error { return nil }
 
 // New creates a new CrudP instance with binary codec by default
 func New() *CrudP {
 	cp := &CrudP{
-		encode: binary.Encode,
-		decode: binary.Decode,
-		log:    func(...any) {},
+		encode:      binary.Encode,
+		decode:      binary.Decode,
+		log:         func(...any) {}, // No-op logger by default
+		accessCheck: noOpAccessCheck, // No-op by default
 	}
 
 	return cp
@@ -64,9 +69,10 @@ func (cp *CrudP) SetDevMode(enabled bool) {
 	cp.devMode = enabled
 }
 
-// SetUserLevel configures the function to extract the current user's access level
-func (cp *CrudP) SetUserLevel(fn func(data ...any) int) {
-	cp.getUserLevel = fn
+// SetUserRoles configures the current user's roles extractor.
+// Access checks are enabled when RegisterRoutes is called on the server.
+func (cp *CrudP) SetUserRoles(fn func(data ...any) []byte) {
+	cp.getUserRoles = fn
 }
 
 // SetAccessDeniedHandler configures a callback for failed access attempts

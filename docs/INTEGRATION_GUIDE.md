@@ -46,9 +46,11 @@ func (u *User) ValidateData(action byte, data ...any) error {
 
 // Mandatory: All CRUD entities must implement AccessLevel
 // See [Access Control Guide](./ACCESS_CONTROL.md)
-func (u *User) MinAccess(action byte) int {
-    if action == 'r' { return 1 } // Read requires level 1
-    return 2 // Write requires level 2
+func (u *User) AllowedRoles(action byte) []byte {
+	if action == 'r' {
+		return []byte{'*'} // Any authenticated user can read
+	}
+	return []byte{'a'} // Only admins can write
 }
 ```
 
@@ -192,8 +194,8 @@ func main() {
     cp := crudp.New()
     
     // 2. Configure Access Control (see [Access Control Guide](./ACCESS_CONTROL.md))
-    cp.SetUserLevel(func(data ...any) int {
-        return 1 // Implement logic to extract level from context/request
+    cp.SetUserRoles(func(data ...any) []byte {
+        return []byte{'*'} // Implement logic to extract roles from context/request
     })
 
     // 3. Register Handlers

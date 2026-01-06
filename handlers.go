@@ -56,9 +56,32 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 
 			// Enforce AccessLevel
 			if access, ok := h.(AccessLevel); ok {
-				ah.MinAccess = access.MinAccess
+				ah.AllowedRoles = access.AllowedRoles
+
+				// Security-by-default: validate all implemented actions have roles defined
+				for _, action := range []byte{'c', 'r', 'u', 'd'} {
+					// Only validate actions that are implemented
+					implemented := false
+					switch action {
+					case 'c':
+						implemented = ah.Create != nil
+					case 'r':
+						implemented = ah.Read != nil
+					case 'u':
+						implemented = ah.Update != nil
+					case 'd':
+						implemented = ah.Delete != nil
+					}
+
+					if implemented {
+						roles := ah.AllowedRoles(action)
+						if len(roles) == 0 {
+							return Errf("security error: AllowedRoles('%c') returned nil/empty for handler: %s (each action must define at least one role)", action, ah.name)
+						}
+					}
+				}
 			} else {
-				return Errf("missing interface: 'MinAccess(action byte) int' for handler: %s", ah.name)
+				return Errf("missing interface: 'AllowedRoles(action byte) []byte' for handler: %s", ah.name)
 			}
 
 			// Validate AllowedAccess doesn't return -1 or invalid for implemented actions
@@ -81,18 +104,18 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 		}
 	}
 
-	// Security: If CRUD handlers are registered but no UserLevel extractor is configured,
+	// Security: If CRUD handlers are registered but no UserRoles extractor is configured,
 	// and we are NOT in dev mode, it's a security risk.
-	if !cp.devMode && cp.getUserLevel == nil {
+	if !cp.devMode && cp.getUserRoles == nil {
 		hasCRUD := false
 		for _, ah := range cp.handlers {
-			if ah.MinAccess != nil {
+			if ah.AllowedRoles != nil {
 				hasCRUD = true
 				break
 			}
 		}
 		if hasCRUD {
-			return Errf("security error: CRUD handlers registered but SetUserLevel() not configured")
+			return Errf("security error: CRUD handlers registered but SetUserRoles() not configured")
 		}
 	}
 
@@ -116,21 +139,8 @@ func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, er
 	handler := cp.handlers[handlerID]
 
 	// 1. Access Control (first step)
-	if !cp.devMode && handler.MinAccess != nil {
-		userLevel := 0
-		if cp.getUserLevel != nil {
-			userLevel = cp.getUserLevel(data...)
-		}
-
-		minRequired := handler.MinAccess(action)
-		if userLevel < minRequired {
-			// Access denied
-			if cp.accessDeniedHandler != nil {
-				cp.accessDeniedHandler(handler.name, action, userLevel, minRequired)
-			}
-			cp.log("access denied for handler:", handler.name)
-			return nil, Errf("access denied")
-		}
+	if err := cp.accessCheck(handler, action, data...); err != nil {
+		return nil, err
 	}
 
 	// 2. Mandatory validation before executing

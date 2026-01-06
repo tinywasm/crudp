@@ -1,6 +1,6 @@
 # Access Control (RBAC)
 
-CRUDP implements a hierarchical, level-based access control system. Every Entity that implements CRUD operations must define its required permissions for each action.
+CRUDP implements a non-hierarchical, role-based access control (RBAC) system. Every Entity that implements CRUD operations must define its required roles for each action.
 
 ## AccessLevel Interface
 
@@ -8,39 +8,44 @@ Entities must implement the `AccessLevel` interface defined in [`interfaces.go`]
 
 ```go
 type AccessLevel interface {
-    MinAccess(action byte) int
+    AllowedRoles(action byte) []byte
 }
 ```
 
-### Default Levels (Standard)
+### Security by Default
 
-While levels can be any `int`, we recommend following this convention:
+- If `AllowedRoles` returns `nil` or an empty slice `[]byte{}`, `RegisterHandlers` will return an **error**.
+- Every action ('c', 'r', 'u', 'd') implemented by the handler MUST have roles defined.
 
-| Level | Meaning | Description |
-|-------|---------|-------------|
-| 0 | Public | No authentication required (if Resolver allows it) |
-| 1 | Reader | Grant access to `Read` operations |
-| 2 | Editor | Grant access to `Create`, `Update`, `Delete` |
-| 255 | Admin | Full control over the resource |
+### Role Conventions
+
+While roles can be any `byte`, we recommend using intuitive ASCII characters:
+
+| Role | Meaning | Description |
+|------|---------|-------------|
+| `'*'` | Authenticated | Any user with at least one role assigned |
+| `'a'` | Admin | Full control over the resource |
+| `'e'` | Editor | Can create, update and read |
+| `'v'` | Visitor | Read-only access |
 
 ## Server Configuration
 
-To enable access control, you must configure how CRUDP determines the current user's level.
+To enable access control, you must configure how CRUDP determines the current user's roles.
 
-### 1. Set User Level Resolver
+### 1. Set User Roles Resolver
 
-This function is called before every action. It usually extracts the level from the request context or headers.
+This function is called before every action. It usually extracts roles from a JWT, session, or request context.
 
 ```go
-cp.SetUserLevel(func(data ...any) int {
+cp.SetUserRoles(func(data ...any) []byte {
     for _, item := range data {
         if ctx, ok := item.(*context.Context); ok {
-            if level, ok := ctx.Value("user_level").(int); ok {
-                return level
+            if roles, ok := ctx.Value("user_roles").([]byte); ok {
+                return roles
             }
         }
     }
-    return 0 // Default to no access
+    return nil // No roles (unauthenticated)
 })
 ```
 
@@ -54,12 +59,11 @@ cp.SetDevMode(true)
 
 ### 3. Access Denied Notification
 
-You can configure a callback to receive detailed information about failed access attempts (for logging, alerts, or audit trails).
+You can configure a callback to receive detailed information about failed access attempts.
 
 ```go
-cp.SetAccessDeniedHandler(func(handler string, action byte, userLevel int, minRequired int) {
-    log.Printf("SECURITY: User (level %d) tried to perform '%c' on %s (needs %d)", 
-        userLevel, action, handler, minRequired)
+cp.SetAccessDeniedHandler(func(handler string, action byte, userRoles []byte, allowedRoles []byte, errMsg string) {
+    log.Printf("SECURITY: %s (User roles %q, needs %q)", errMsg, userRoles, allowedRoles)
 })
 ```
 
@@ -68,20 +72,30 @@ cp.SetAccessDeniedHandler(func(handler string, action byte, userLevel int, minRe
 Each entity decides its own rules based on the `action` byte ('c', 'r', 'u', 'd'):
 
 ```go
-func (u *User) MinAccess(action byte) int {
+func (u *User) AllowedRoles(action byte) []byte {
     switch action {
     case 'r': 
-        return 1 // Readers and above can see users
+        return []byte{'v', 'e', 'a'} // Visitors, Editors and Admins can see users
     case 'c', 'u', 'd': 
-        return 255 // Only Admins can modify users
+        return []byte{'a'}           // Only Admins can modify users
     }
-    return 255 // Default to most restrictive
+    return []byte{'a'} // Safe default
 }
 ```
 
+### Multiple Roles Logic (OR)
+
+The access check uses **OR** logic. If a user has **any** of the roles returned by `AllowedRoles`, access is granted.
+
+Example:
+- Resource allows: `['d', 'm']` (dentist or medic)
+- User has: `['m', 'r']` (medic and reception)
+- **Result**: Access GRANTED (matches 'm').
+
 ## Security Flow
 
-1. **Access Check**: `getUserLevel()` >= `MinAccess(action)`?
+1. **Access Check**: Does `getUserRoles()` contain ANY of `AllowedRoles(action)`?
+   - Special case: If `AllowedRoles` contains `'*'`, any authenticated user (non-empty roles) can access.
    - If fail: call `AccessDeniedHandler`, log generic message, return error.
 2. **Data Validation**: `ValidateData(action, data)`
    - If fail: return validation error.
@@ -89,5 +103,5 @@ func (u *User) MinAccess(action byte) int {
 
 ## Requirements
 
-- `SetUserLevel` is **mandatory** if any CRUD handlers are registered (unless `DevMode` is on).
-- `RegisterHandlers` will return an error if an Entity implements CRUD but lacks `MinAccess`.
+- `SetUserRoles` is **mandatory** if any CRUD handlers are registered (unless `DevMode` is on).
+- `RegisterHandlers` will return an error if an Entity implements CRUD but lacks `AllowedRoles` or returns `nil`/empty for implemented actions.
