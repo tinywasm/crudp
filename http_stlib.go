@@ -77,7 +77,7 @@ func (cp *CrudP) handleBatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Inject context and http.Request for handlers
-	ctx := context.TODO()
+	ctx := context.Background()
 	resp, err := cp.Execute(&req, ctx, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -134,7 +134,7 @@ func (cp *CrudP) handleSingle(w http.ResponseWriter, r *http.Request, h actionHa
 	}
 
 	// Prepend path (as string) and other injectables (context, request)
-	ctx := context.TODO()
+	ctx := context.Background()
 	inject := []any{ctx, r}
 	if path != "" {
 		inject = append(inject, path)
