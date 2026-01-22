@@ -1,7 +1,7 @@
 github.com/tinywasm/binary v0.5.3 h1:deNGNbZHNxhfgjy6pwbg+z2B+LVnlE1l7dugRmmdJ94=
 github.com/tinywasm/binary v0.5.3/go.mod h1:3BHp47sWLiSNfbAtdckytfQeKXztUq49uRZGJBVr6Yg=
-github.com/tinywasm/context v0.0.10 h1:4/hunwOIzaeM2Jx0011XGzYEtrYmQeBZfFaAp/1m85s=
-github.com/tinywasm/context v0.0.10/go.mod h1:yhyr/hWK9ZCZH6cifj1nRX6zVqGmyWdy+ljzxkTshBo=
+github.com/tinywasm/context v0.0.11 h1:k+IeEPihgORcwp+2n2qygBzfh61fMouFzOEhBwvVIrI=
+github.com/tinywasm/context v0.0.11/go.mod h1:xEk6ZfbF3Jx8JnM4UqUJxfM0WM87q8JC3wOA99tccV8=
 github.com/tinywasm/dom v0.0.8 h1:R5j8E5CFq/ispdlSYK7ihZyIgLHrtVZXgoOGzfzVlfE=
 github.com/tinywasm/dom v0.0.8/go.mod h1:SJCruCEuitNhrAw+B1zOBb7l0B1QQDRp+8dyPtLqFYQ=
 github.com/tinywasm/fetch v0.1.15 h1:Kd09B4IMtAzDzwYZPHvEyf6yq0wA3jBWLQ/P5MV1Usk=
