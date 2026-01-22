@@ -44,7 +44,7 @@ func (u *User) Read(data ...any) any {
 			}
 			// Find user by ID
 			for _, u := range users {
-				if Fmt("%d", u.ID) == path {
+				if Sprintf("%d", u.ID) == path {
 					return u
 				}
 			}
@@ -70,7 +70,7 @@ func (u *User) Update(data ...any) any {
 
 	if targetID != "" && updateData != nil {
 		for _, u := range users {
-			if Fmt("%d", u.ID) == targetID {
+			if Sprintf("%d", u.ID) == targetID {
 				u.Name = updateData.Name
 				u.Email = updateData.Email
 				return u
@@ -85,7 +85,7 @@ func (u *User) Delete(data ...any) any {
 	for _, item := range data {
 		if path, ok := item.(string); ok {
 			for i, u := range users {
-				if Fmt("%d", u.ID) == path {
+				if Sprintf("%d", u.ID) == path {
 					users = append(users[:i], users[i+1:]...)
 					return "deleted"
 				}

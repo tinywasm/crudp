@@ -96,7 +96,7 @@ func (h *Handler) Read(data ...any) any {
         if path, ok := item.(string); ok {
             if path == "" { return users } // All users
             for _, u := range users {
-                if fmt.Fmt("%d", u.ID) == path { return u }
+                if Sprintf("%d", u.ID) == path { return u }
             }
         }
     }

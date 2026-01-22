@@ -203,7 +203,7 @@ func (cp *CrudP) doAccessCheck(handler actionHandler, action byte, data ...any) 
 	allowedRoles := handler.AllowedRoles(action)
 	if !hasAnyRole(userRoles, allowedRoles) {
 		// Access denied
-		errMsg := Fmt("required roles %q, user has %q", allowedRoles, userRoles)
+		errMsg := Sprintf("required roles %q, user has %q", allowedRoles, userRoles)
 		if cp.accessDeniedHandler != nil {
 			cp.accessDeniedHandler(handler.name, action, userRoles, allowedRoles, errMsg)
 		}

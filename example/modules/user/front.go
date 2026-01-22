@@ -48,7 +48,7 @@ func (u *User) Read(data ...any) any {
 func (u *User) Update(data ...any) any {
 	for _, item := range data {
 		if u, ok := item.(*User); ok {
-			if el, ok := dom.Get(Fmt("user-%d", u.ID)); ok {
+			if el, ok := dom.Get(Sprintf("user-%d", u.ID)); ok {
 				el.SetHTML(renderUser(u))
 			}
 			return u
@@ -61,7 +61,7 @@ func (u *User) Update(data ...any) any {
 func (u *User) Delete(data ...any) any {
 	for _, item := range data {
 		if path, ok := item.(string); ok {
-			if el, ok := dom.Get(Fmt("user-%s", path)); ok {
+			if el, ok := dom.Get(Sprintf("user-%s", path)); ok {
 				el.Remove()
 			}
 			return "deleted"
