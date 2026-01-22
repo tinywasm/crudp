@@ -9,4 +9,4 @@ require (
 	github.com/tinywasm/fmt v0.16.1
 )
 
-require github.com/tinywasm/dom v0.0.8
+require github.com/tinywasm/dom v0.0.9
