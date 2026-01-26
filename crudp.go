@@ -69,6 +69,11 @@ func (cp *CrudP) SetDevMode(enabled bool) {
 	cp.devMode = enabled
 }
 
+// IsDevMode returns the current development mode status
+func (cp *CrudP) IsDevMode() bool {
+	return cp.devMode
+}
+
 // SetUserRoles configures the current user's roles extractor.
 // Access checks are enabled when RegisterRoutes is called on the server.
 func (cp *CrudP) SetUserRoles(fn func(data ...any) []byte) {
