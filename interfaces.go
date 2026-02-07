@@ -1,5 +1,7 @@
 package crudp
 
+import "github.com/tinywasm/dom"
+
 // Separate CRUD interfaces - handlers implement only what they need
 // Return `any` which internally can be slice for multiple items
 type Creator interface {
@@ -20,15 +22,15 @@ type Deleter interface {
 
 // NamedHandler provides the unique name for the entity (required if CRUD implemented)
 type NamedHandler interface {
-	HandlerName() string
+	dom.NamedHandler
 }
 
 // DataValidator validates complete data before action (required if CRUD implemented)
 type DataValidator interface {
-	ValidateData(action byte, data ...any) error
+	dom.DataValidator
 }
 
 // AccessLevel defines role-based access control (required if CRUD implemented)
 type AccessLevel interface {
-	AllowedRoles(action byte) []byte
+	dom.AccessLevel
 }
