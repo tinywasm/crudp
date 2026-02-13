@@ -1,5 +1,5 @@
-github.com/tinywasm/binary v0.5.6 h1:dzUbTD1/SbKSGlQAJ6CcD/N6UGWdEsDSg3pRgbfwYXY=
-github.com/tinywasm/binary v0.5.6/go.mod h1:SNbXbjDwNj/E+eSdQVkGt5BVCbBa/gHqMuEzXvbABBA=
+github.com/tinywasm/binary v0.5.7 h1:1lrmlT4528FRBrkdHyNoBXHvjNi38FpaU4yiP22CcYc=
+github.com/tinywasm/binary v0.5.7/go.mod h1:SNbXbjDwNj/E+eSdQVkGt5BVCbBa/gHqMuEzXvbABBA=
 github.com/tinywasm/context v0.0.11 h1:k+IeEPihgORcwp+2n2qygBzfh61fMouFzOEhBwvVIrI=
 github.com/tinywasm/context v0.0.11/go.mod h1:xEk6ZfbF3Jx8JnM4UqUJxfM0WM87q8JC3wOA99tccV8=
 github.com/tinywasm/dom v0.5.0 h1:720+LoZTB4S/ybcNfRdEJt2wBxo09WtzEjq6LR5sK+k=
