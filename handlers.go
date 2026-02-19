@@ -54,33 +54,36 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 				return Errf("missing interface: 'ValidateData(action byte, data ...any) error' for handler: %s", ah.name)
 			}
 
-			// Enforce AccessLevel
+			// Enforce AccessLevel (optional when SetAccessCheck is configured)
 			if access, ok := h.(AccessLevel); ok {
 				ah.AllowedRoles = access.AllowedRoles
 
-				// Security-by-default: validate all implemented actions have roles defined
-				for _, action := range []byte{'c', 'r', 'u', 'd'} {
-					// Only validate actions that are implemented
-					implemented := false
-					switch action {
-					case 'c':
-						implemented = ah.Create != nil
-					case 'r':
-						implemented = ah.Read != nil
-					case 'u':
-						implemented = ah.Update != nil
-					case 'd':
-						implemented = ah.Delete != nil
-					}
+				// Security-by-default: validate all implemented actions have roles defined.
+				// Skipped when accessCheckFn is set — the external hook owns access decisions.
+				if cp.accessCheckFn == nil {
+					for _, action := range []byte{'c', 'r', 'u', 'd'} {
+						// Only validate actions that are implemented
+						implemented := false
+						switch action {
+						case 'c':
+							implemented = ah.Create != nil
+						case 'r':
+							implemented = ah.Read != nil
+						case 'u':
+							implemented = ah.Update != nil
+						case 'd':
+							implemented = ah.Delete != nil
+						}
 
-					if implemented {
-						roles := ah.AllowedRoles(action)
-						if len(roles) == 0 {
-							return Errf("security error: AllowedRoles('%c') returned nil/empty for handler: %s (each action must define at least one role)", action, ah.name)
+						if implemented {
+							roles := ah.AllowedRoles(action)
+							if len(roles) == 0 {
+								return Errf("security error: AllowedRoles('%c') returned nil/empty for handler: %s (each action must define at least one role)", action, ah.name)
+							}
 						}
 					}
 				}
-			} else {
+			} else if cp.accessCheckFn == nil {
 				return Errf("missing interface: 'AllowedRoles(action byte) []byte' for handler: %s", ah.name)
 			}
 
@@ -104,9 +107,9 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 		}
 	}
 
-	// Security: If CRUD handlers are registered but no UserRoles extractor is configured,
+	// Security: If CRUD handlers are registered but no access control is configured,
 	// and we are NOT in dev mode, it's a security risk.
-	if !cp.devMode && cp.getUserRoles == nil {
+	if !cp.devMode && cp.getUserRoles == nil && cp.accessCheckFn == nil {
 		hasCRUD := false
 		for _, ah := range cp.handlers {
 			if ah.AllowedRoles != nil {

@@ -191,7 +191,24 @@ func (cp *CrudP) encodeBody(data any) ([]byte, error) {
 
 // doAccessCheck performs the actual access validation (server-side only)
 func (cp *CrudP) doAccessCheck(handler actionHandler, action byte, data ...any) error {
-	if cp.devMode || handler.AllowedRoles == nil {
+	if cp.devMode {
+		return nil
+	}
+
+	// External access check (e.g. rbac.HasPermission). Takes precedence over AllowedRoles.
+	if cp.accessCheckFn != nil {
+		if !cp.accessCheckFn(handler.name, action, data...) {
+			if cp.accessDeniedHandler != nil {
+				cp.accessDeniedHandler(handler.name, action, nil, nil, "access denied")
+			}
+			cp.log("access denied for handler:", handler.name)
+			return Errf("access denied")
+		}
+		return nil
+	}
+
+	// Static role-based check via AllowedRoles.
+	if handler.AllowedRoles == nil {
 		return nil
 	}
 
@@ -202,7 +219,6 @@ func (cp *CrudP) doAccessCheck(handler actionHandler, action byte, data ...any) 
 
 	allowedRoles := handler.AllowedRoles(action)
 	if !hasAnyRole(userRoles, allowedRoles) {
-		// Access denied
 		errMsg := Sprintf("required roles %q, user has %q", allowedRoles, userRoles)
 		if cp.accessDeniedHandler != nil {
 			cp.accessDeniedHandler(handler.name, action, userRoles, allowedRoles, errMsg)

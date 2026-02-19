@@ -30,6 +30,7 @@ type CrudP struct {
 	log                 func(...any) // Never nil - uses no-op by default
 	devMode             bool
 	getUserRoles        func(data ...any) []byte
+	accessCheckFn       func(resource string, action byte, data ...any) bool
 	accessDeniedHandler AccessDeniedHandler
 	accessCheck         func(handler actionHandler, action byte, data ...any) error
 }
@@ -83,4 +84,14 @@ func (cp *CrudP) SetUserRoles(fn func(data ...any) []byte) {
 // SetAccessDeniedHandler configures a callback for failed access attempts
 func (cp *CrudP) SetAccessDeniedHandler(fn AccessDeniedHandler) {
 	cp.accessDeniedHandler = fn
+}
+
+// SetAccessCheck configures an external access check function.
+// When set, AllowedRoles() interface is NOT required on handlers.
+// The function receives the handler's resource name, the action byte ('c','r','u','d'),
+// and the raw request data (same variadic as SetUserRoles closure).
+// Must be called before RegisterHandlers().
+// Mutually exclusive with SetUserRoles — use one or the other.
+func (cp *CrudP) SetAccessCheck(fn func(resource string, action byte, data ...any) bool) {
+	cp.accessCheckFn = fn
 }
