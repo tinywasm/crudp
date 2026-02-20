@@ -6,5 +6,5 @@ github.com/tinywasm/dom v0.5.0 h1:720+LoZTB4S/ybcNfRdEJt2wBxo09WtzEjq6LR5sK+k=
 github.com/tinywasm/dom v0.5.0/go.mod h1:0wlX/Jl/tybubizKtmIpN+qpWJz57urBJ9UTbmCn8vQ=
 github.com/tinywasm/fetch v0.1.16 h1:JRI0rSN/DroLUEKLmmEQCk/by7FM7SBaxiWjLuL6cjU=
 github.com/tinywasm/fetch v0.1.16/go.mod h1:NfaouuPITKVUjVrQfSwx+KqEoNANAveZbPVHupZFGWI=
-github.com/tinywasm/fmt v0.18.0 h1:B1AKOU91uZZf9b7FDdF+cpf25Sa8nJe4X4yjgH2lL0Y=
-github.com/tinywasm/fmt v0.18.0/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=
+github.com/tinywasm/fmt v0.18.2 h1:dV6tRPHVpcUABKYrfQ4BuYwj2h2I1JJ54eI4PWljB9I=
+github.com/tinywasm/fmt v0.18.2/go.mod h1:L2GCAi6asgytPV6TVvGrRq5Ml+DkUt1Ijo5i/2J1jOY=
