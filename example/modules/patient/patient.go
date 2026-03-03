@@ -8,17 +8,21 @@ type Patient struct {
 
 func (p *Patient) HandlerName() string { return "patients" }
 
-func (p *Patient) Create(data ...any) any {
+func (p *Patient) Create(payload any) (any, error) {
 	// Specific implementation for patients
-	return nil
+	return nil, nil
 }
 
-func (p *Patient) Read(data ...any) any {
+func (p *Patient) Read(id string) (any, error) {
 	// Specific implementation for patients
-	return nil
+	return nil, nil
 }
 
-func (p *Patient) ValidateData(action byte, data ...any) error { return nil }
+func (p *Patient) List() (any, error) {
+	return nil, nil
+}
+
+func (p *Patient) ValidateData(action byte, payload any) error { return nil }
 func (p *Patient) AllowedRoles(action byte) []byte             { return []byte{'*'} }
 
 // Add returns all entities from this module

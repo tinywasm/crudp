@@ -30,7 +30,7 @@ Handlers return `any` which can be:
 - An `error` (detected automatically by the server)
 
 ```go
-func (h *Handler) Create(data ...any) any {
+func (h *Handler) Create(payload any) (any, error) {
     // Return result or error
 }
 ```
@@ -43,12 +43,11 @@ Server-side handlers receive `*http.Request` in the `data` slice, enabling:
 - Any HTTP-specific logic without custom routes
 
 ```go
-func (h *Handler) Create(data ...any) any {
-    for _, item := range data {
-        if r, ok := item.(*http.Request); ok {
-            // Access headers, parse multipart, etc.
-        }
+func (h *Handler) Create(payload any) (any, error) {
+    if r, ok := payload.(*http.Request); ok {
+        // Access headers, parse multipart, etc.
     }
+    return nil, nil
 }
 ```
 

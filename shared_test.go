@@ -3,14 +3,23 @@ package crudp_test
 import (
 	"encoding/json"
 
-	"github.com/tinywasm/binary"
+	tjson "github.com/tinywasm/json"
 	"github.com/tinywasm/crudp"
 )
 
 func NewTestCrudP() *crudp.CrudP {
 	cp := crudp.New()
+	cp.SetCodecs(testEncodeJSON2, testDecodeJSON2)
 	cp.SetDevMode(true)
 	return cp
+}
+
+func testEncodeJSON2(input any, output any) error {
+	return tjson.Encode(input, output)
+}
+
+func testDecodeJSON2(input any, output any) error {
+	return tjson.Decode(input.([]byte), output)
 }
 
 func NewTestCrudPJSON() *crudp.CrudP {
@@ -22,12 +31,12 @@ func NewTestCrudPJSON() *crudp.CrudP {
 
 func testEncodeBinary(data any) ([]byte, error) {
 	var out []byte
-	err := binary.Encode(data, &out)
+	err := tjson.Encode(data, &out)
 	return out, err
 }
 
 func testDecodeBinary(data []byte, target any) error {
-	return binary.Decode(data, target)
+	return tjson.Decode(data, target)
 }
 
 func testEncodeJSON(data any) ([]byte, error) {

@@ -53,17 +53,16 @@ http.ListenAndServe(":8080", handler)
 Since handlers receive the `*http.Request`, you can handle any HTTP-specific logic (like file uploads or webhooks) directly inside your CRUD methods.
 
 ```go
-func (h *UserHandler) Create(data ...any) any {
-    for _, item := range data {
-        if r, ok := item.(*http.Request); ok {
-            // Check headers, handle multipart, etc.
-            if r.Header.Get("X-Custom-Webhook") != "" {
-                return h.handleWebhook(r)
-            }
+func (h *UserHandler) Create(payload any) (any, error) {
+    if r, ok := payload.(*http.Request); ok {
+        // Check headers, handle multipart, etc.
+        if r.Header.Get("X-Custom-Webhook") != "" {
+            return h.handleWebhook(r)
         }
     }
+
     // Default JSON processing...
-    return nil
+    return nil, nil
 }
 ```
 

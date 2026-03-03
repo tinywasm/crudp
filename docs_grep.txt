@@ -1,0 +1,31 @@
+docs/ACCESS_CONTROL.md:40:cp.SetUserRoles(func(data ...any) []byte {
+docs/HANDLER_REGISTER.md:13:- `Creator`: `Create(data ...any) any`
+docs/HANDLER_REGISTER.md:14:- `Reader`: `Read(data ...any) any`
+docs/HANDLER_REGISTER.md:15:- `Updater`: `Update(data ...any) any`
+docs/HANDLER_REGISTER.md:16:- `Deleter`: `Delete(data ...any) any`
+docs/INTEGRATION_GUIDE.md:43:func (u *User) ValidateData(action byte, data ...any) error {
+docs/INTEGRATION_GUIDE.md:79:func (h *Handler) Create(data ...any) any {
+docs/INTEGRATION_GUIDE.md:94:func (h *Handler) Read(data ...any) any {
+docs/INTEGRATION_GUIDE.md:122:func (h *Handler) Read(data ...any) any {
+docs/INTEGRATION_GUIDE.md:197:    cp.SetUserRoles(func(data ...any) []byte {
+docs/INITIAL_VISION.md:33:func (h *Handler) Create(data ...any) any {
+docs/INITIAL_VISION.md:46:func (h *Handler) Create(data ...any) any {
+docs/WEBHOOKS.md:26:func (w *WebhookEvent) ValidateData(action byte, data ...any) error { return nil }
+docs/WEBHOOKS.md:31:func (w *WebhookEvent) Create(data ...any) any {
+docs/PLAN.md:4:> Remove the semantic ambiguity in `Read(data ...any) any` by splitting into `Read(id string)`
+docs/PLAN.md:26:type Creator interface { Create(data ...any) any }
+docs/PLAN.md:27:type Reader  interface { Read(data ...any) any }
+docs/PLAN.md:28:type Updater interface { Update(data ...any) any }
+docs/PLAN.md:29:type Deleter interface { Delete(data ...any) any }
+docs/PLAN.md:99:- `Read(id string) (any, error)` — explicit id, no more ambiguous `data ...any`
+docs/PLAN.md:150:Update `CallHandler` to use the new typed methods. The incoming `data ...any` is now
+docs/PLAN.md:155:func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, error) {
+docs/FILE_UPLOAD.md:33:func (h *Handler) Create(data ...any) any {
+docs/HTTP_ROUTES_AND_MIDDLEWARE.md:20:Handlers receive the following injected values in the `data ...any` slice:
+docs/HTTP_ROUTES_AND_MIDDLEWARE.md:56:func (h *UserHandler) Create(data ...any) any {
+docs/ARCHITECTURE.md:49:| Handler signature | `func(data ...any) any` | Simplifies API and reduces binary size |
+docs/ARCHITECTURE.md:69:type Creator interface { Create(data ...any) any }
+docs/ARCHITECTURE.md:70:type Reader interface  { Read(data ...any) any }
+docs/ARCHITECTURE.md:71:type Updater interface { Update(data ...any) any }
+docs/ARCHITECTURE.md:72:type Deleter interface { Delete(data ...any) any }
+docs/ARCHITECTURE.md:76:type Validator interface { Validate(action byte, data ...any) error }
