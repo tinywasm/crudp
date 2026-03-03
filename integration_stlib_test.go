@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tinywasm/binary"
+	tjson "github.com/tinywasm/json"
 	"github.com/tinywasm/crudp"
 )
 
@@ -22,31 +22,26 @@ type IntegrationUser struct {
 
 func (u *IntegrationUser) HandlerName() string { return "users" }
 
-func (u *IntegrationUser) Create(data ...any) any {
-	for _, item := range data {
-		switch v := item.(type) {
-		case *IntegrationUser:
-			v.ID = 999
-			return v
-		}
+func (u *IntegrationUser) Create(payload any) (any, error) {
+	if v, ok := payload.(*IntegrationUser); ok {
+		v.ID = 999
+		return v, nil
 	}
-	return nil
+	return nil, nil
 }
 
-func (u *IntegrationUser) Read(data ...any) any {
-	for _, item := range data {
-		switch v := item.(type) {
-		case string:
-			// Path parameter (e.g., "123" from /users/123)
-			return &IntegrationUser{ID: 123, Name: "User from path: " + v}
-		case *IntegrationUser:
-			return &IntegrationUser{ID: v.ID, Name: "Found: " + v.Name}
-		}
+func (u *IntegrationUser) Read(id string) (any, error) {
+	if id != "" {
+		return &IntegrationUser{ID: 123, Name: "User from path: " + id}, nil
 	}
-	return nil
+	return nil, nil
 }
 
-func (u *IntegrationUser) ValidateData(action byte, data ...any) error { return nil }
+func (u *IntegrationUser) List() (any, error) {
+	return nil, nil
+}
+
+func (u *IntegrationUser) ValidateData(action byte, payload any) error { return nil }
 func (u *IntegrationUser) AllowedRoles(action byte) []byte             { return []byte{'*'} }
 
 func TestIntegration_New(t *testing.T) {
@@ -86,7 +81,7 @@ func TestIntegration_AutomaticEndpoints(t *testing.T) {
 
 		// Decode response
 		var resp crudp.Response
-		if err := binary.Decode(rec.Body.Bytes(), &resp); err != nil {
+		if err := tjson.Decode(rec.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
 
@@ -109,7 +104,7 @@ func TestIntegration_AutomaticEndpoints(t *testing.T) {
 
 	t.Run("POST /batch", func(t *testing.T) {
 		var userData []byte
-		binary.Encode(&IntegrationUser{Name: "Batch"}, &userData)
+		tjson.Encode(&IntegrationUser{Name: "Batch"}, &userData)
 
 		batchReq := crudp.BatchRequest{
 			Packets: []crudp.Packet{
@@ -118,7 +113,7 @@ func TestIntegration_AutomaticEndpoints(t *testing.T) {
 		}
 
 		var body []byte
-		binary.Encode(batchReq, &body)
+		tjson.Encode(batchReq, &body)
 
 		req := httptest.NewRequest("POST", "/batch", httpBodyFromBytes(body))
 		rec := httptest.NewRecorder()
@@ -130,7 +125,7 @@ func TestIntegration_AutomaticEndpoints(t *testing.T) {
 		}
 
 		var resp crudp.BatchResponse
-		if err := binary.Decode(rec.Body.Bytes(), &resp); err != nil {
+		if err := tjson.Decode(rec.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("failed to decode batch response: %v", err)
 		}
 
@@ -168,13 +163,14 @@ func httpBodyFromBytes(data []byte) *bytesBody {
 type RestrictedResource struct{}
 
 func (r *RestrictedResource) HandlerName() string                         { return "restricted" }
-func (r *RestrictedResource) Read(data ...any) any                        { return "secret data" }
-func (r *RestrictedResource) ValidateData(action byte, data ...any) error { return nil }
+func (r *RestrictedResource) Read(id string) (any, error)                 { return "secret data", nil }
+func (r *RestrictedResource) List() (any, error)                          { return "secret data", nil }
+func (r *RestrictedResource) ValidateData(action byte, payload any) error { return nil }
 func (r *RestrictedResource) AllowedRoles(action byte) []byte             { return []byte{'a'} }
 
 type PartialRolesHandler struct{ RestrictedResource }
 
-func (p *PartialRolesHandler) Create(data ...any) any { return nil }
+func (p *PartialRolesHandler) Create(payload any) (any, error) { return nil, nil }
 func (p *PartialRolesHandler) AllowedRoles(action byte) []byte {
 	if action == 'r' {
 		return []byte{'*'}
@@ -198,7 +194,8 @@ func (m *MultiRoleResource) AllowedRoles(action byte) []byte {
 
 func TestIntegration_AccessControl(t *testing.T) {
 	t.Run("Access Granted", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'a'} })
 		cp.RegisterHandlers(&RestrictedResource{})
 
@@ -215,7 +212,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Access Denied", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'v'} }) // Role 'v' != 'a'
 		cp.RegisterHandlers(&RestrictedResource{})
 
@@ -232,7 +230,7 @@ func TestIntegration_AccessControl(t *testing.T) {
 		}
 
 		var resp crudp.Response
-		if err := binary.Decode(rec.Body.Bytes(), &resp); err != nil {
+		if err := tjson.Decode(rec.Body.Bytes(), &resp); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
 
@@ -242,7 +240,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Access Denied Callback", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'v'} })
 
 		notified := false
@@ -274,7 +273,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Security-by-Default (Empty Slice)", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'*'} })
 		err := cp.RegisterHandlers(&EmptyRolesHandler{})
 		if err == nil {
@@ -283,7 +283,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("OR Logic Match", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'m', 'r'} }) // Medic and Reception
 		cp.RegisterHandlers(&MultiRoleResource{})                             // Resource allows Dentist or Medic
 
@@ -300,7 +301,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Special '*' Role Access", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte("any") })
 		cp.RegisterHandlers(&IntegrationUser{}) // Uses '*'
 
@@ -317,7 +319,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Unauthenticated Denied on '*'", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return nil }) // Unauthenticated
 		cp.RegisterHandlers(&IntegrationUser{})                  // Uses '*'
 
@@ -329,14 +332,14 @@ func TestIntegration_AccessControl(t *testing.T) {
 		mux.ServeHTTP(rec, req)
 
 		var resp crudp.Response
-		binary.Decode(rec.Body.Bytes(), &resp)
+		tjson.Decode(rec.Body.Bytes(), &resp)
 		if resp.MessageType != 2 { // Msg.Error
 			t.Errorf("expected access denied for unauthenticated user on '*' resource")
 		}
 	})
 
 	t.Run("DevMode Bypass", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
 		cp.SetDevMode(true)
 		cp.RegisterHandlers(&RestrictedResource{}) // Requires 'a'
 
@@ -354,7 +357,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 	})
 
 	t.Run("Missing SetUserRoles Error", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		// No cp.SetUserRoles()
 		err := cp.RegisterHandlers(&RestrictedResource{})
 		if err == nil {
@@ -362,7 +366,8 @@ func TestIntegration_AccessControl(t *testing.T) {
 		}
 	})
 	t.Run("Security-by-Default (Partial Config)", func(t *testing.T) {
-		cp := crudp.New()
+		cp := NewTestCrudP()
+		cp.SetDevMode(false)
 		cp.SetUserRoles(func(data ...any) []byte { return []byte{'*'} })
 		err := cp.RegisterHandlers(&PartialRolesHandler{})
 		if err == nil {

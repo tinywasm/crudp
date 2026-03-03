@@ -51,7 +51,7 @@ func (cp *CrudP) RegisterHandlers(handlers ...any) error {
 			if validator, ok := h.(DataValidator); ok {
 				ah.ValidateData = validator.ValidateData
 			} else {
-				return Errf("missing interface: 'ValidateData(action byte, data ...any) error' for handler: %s", ah.name)
+				return Errf("missing interface: 'ValidateData(action byte, payload any) error' for handler: %s", ah.name)
 			}
 
 			// Enforce AccessLevel (optional when SetAccessCheck is configured)
@@ -141,59 +141,58 @@ func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, er
 
 	handler := cp.handlers[handlerID]
 
-	// 1. Access Control (first step)
+	// 1. Access Control
 	if err := cp.accessCheck(handler, action, data...); err != nil {
 		return nil, err
 	}
 
-	// 2. Mandatory validation before executing
+	// 2. Extract payload (first element that is not *http.Request and not context.Context)
+	var payload any
+	var id string
+	for _, d := range data {
+		switch v := d.(type) {
+		case string:
+			id = v
+		default:
+			// Ensure we don't pick up injected *http.Request or context.Context
+			typeStr := Sprintf("%T", v)
+			if typeStr != "*http.Request" && typeStr != "*context.Context" && typeStr != "*context.valueCtx" && typeStr != "*context.cancelCtx" && typeStr != "*context.timerCtx" && typeStr != "*context.emptyCtx" && payload == nil {
+				payload = v
+			}
+		}
+	}
+
+	// 3. Validate
 	if handler.ValidateData != nil {
-		if err := handler.ValidateData(action, data...); err != nil {
+		if err := handler.ValidateData(action, payload); err != nil {
 			return nil, err
 		}
 	}
 
-	var result any
-	implemented := false
+	// 4. Execute
 	switch action {
 	case 'c':
 		if handler.Create != nil {
-			result = handler.Create(data...)
-			implemented = true
+			return handler.Create(payload)
 		}
 	case 'r':
-		if handler.Read != nil {
-			result = handler.Read(data...)
-			implemented = true
+		if id == "" && handler.List != nil {
+			return handler.List()
+		}
+		if id != "" && handler.Read != nil {
+			return handler.Read(id)
 		}
 	case 'u':
 		if handler.Update != nil {
-			result = handler.Update(data...)
-			implemented = true
+			return handler.Update(payload)
 		}
 	case 'd':
 		if handler.Delete != nil {
-			result = handler.Delete(data...)
-			implemented = true
+			err := handler.Delete(id)
+			return nil, err
 		}
-	default:
-		return nil, Errf("unknown action '%c' for handler: %s", action, handler.name)
 	}
-
-	if !implemented {
-		return nil, Errf("action '%c' not implemented for handler: %s", action, handler.name)
-	}
-
-	if result == nil {
-		return nil, nil
-	}
-
-	// Detect error in result for backward compatibility with server expectations
-	if err, ok := result.(error); ok {
-		return nil, err
-	}
-
-	return result, nil
+	return nil, Errf("action '%c' not implemented for handler: %s", action, handler.name)
 }
 
 // decodeWithKnownType decodes packet data using cached type information

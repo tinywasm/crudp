@@ -5,7 +5,7 @@
 > and `List()`. Add proper `error` return to all methods. The `db *orm.DB` is captured
 > in the handler's constructor — never passed as a method parameter.
 >
-> **Status:** Pending execution
+> **Status:** Executed
 
 ---
 
