@@ -1,0 +1,15 @@
+example/README.md:34:- `ValidateData(action byte, data ...any) error`: Data validation logic.
+example/README.md:75:    cp.SetUserRoles(func(data ...any) []byte {
+example/web/server.go:40:	cp.SetUserRoles(func(data ...any) []byte {
+example/modules/user/front.go:11:func (u *User) Create(data ...any) any {
+example/modules/user/front.go:25:func (u *User) Read(data ...any) any {
+example/modules/user/front.go:48:func (u *User) Update(data ...any) any {
+example/modules/user/front.go:61:func (u *User) Delete(data ...any) any {
+example/modules/user/back.go:21:func (u *User) Create(data ...any) any {
+example/modules/user/back.go:39:func (u *User) Read(data ...any) any {
+example/modules/user/back.go:58:func (u *User) Update(data ...any) any {
+example/modules/user/back.go:84:func (u *User) Delete(data ...any) any {
+example/modules/user/user.go:12:func (u *User) ValidateData(action byte, data ...any) error { return nil }
+example/modules/patient/patient.go:11:func (p *Patient) Create(data ...any) any {
+example/modules/patient/patient.go:16:func (p *Patient) Read(data ...any) any {
+example/modules/patient/patient.go:21:func (p *Patient) ValidateData(action byte, data ...any) error { return nil }

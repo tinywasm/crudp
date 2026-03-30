@@ -23,23 +23,20 @@ type WebhookEvent struct {
 
 func (w *WebhookEvent) HandlerName() string { return "webhooks" }
 
-func (w *WebhookEvent) ValidateData(action byte, data ...any) error { return nil }
+func (w *WebhookEvent) ValidateData(action byte, payload any) error { return nil }
 
 // Access control (see [ACCESS_CONTROL.md](./ACCESS_CONTROL.md))
 func (w *WebhookEvent) AllowedRoles(action byte) []byte { return []byte{'*'} } // Webhooks from any authenticated source
 
-func (w *WebhookEvent) Create(data ...any) any {
-    var provider string
-    var r *http.Request
-
-    for _, item := range data {
-        switch v := item.(type) {
-        case string:
-            provider = v // e.g., "stripe" from /webhooks/stripe
-        case *http.Request:
-            r = v
-        }
+func (w *WebhookEvent) Create(payload any) (any, error) {
+    // In this example we assume the payload is a struct holding the required context
+    // or we fetch the *http.Request directly if it's passed as the payload
+    r, ok := payload.(*http.Request)
+    if !ok {
+        return nil, errors.New("expected http.Request payload")
     }
+
+    provider := r.URL.Path // Simplify getting provider from path or query params
 
     // 1. Read raw body for signature verification
     body, _ := io.ReadAll(r.Body)

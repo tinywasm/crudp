@@ -9,7 +9,7 @@ type User struct {
 
 func (u *User) HandlerName() string { return "users" }
 
-func (u *User) ValidateData(action byte, data ...any) error { return nil }
+func (u *User) ValidateData(action byte, payload any) error { return nil }
 func (u *User) AllowedRoles(action byte) []byte             { return []byte{'*'} }
 
 // Add returns all entities from this module
