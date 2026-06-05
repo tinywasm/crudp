@@ -1,0 +1,78 @@
+./example/README.md:34:- `ValidateData(action byte, data ...any) error`: Data validation logic.
+./example/README.md:75:    cp.SetUserRoles(func(data ...any) []byte {
+./example/web/server.go:40:	cp.SetUserRoles(func(data ...any) []byte {
+./example/modules/user/front.go:11:func (u *User) Create(data ...any) any {
+./example/modules/user/front.go:25:func (u *User) Read(data ...any) any {
+./example/modules/user/front.go:48:func (u *User) Update(data ...any) any {
+./example/modules/user/front.go:61:func (u *User) Delete(data ...any) any {
+./example/modules/user/back.go:21:func (u *User) Create(data ...any) any {
+./example/modules/user/back.go:39:func (u *User) Read(data ...any) any {
+./example/modules/user/back.go:58:func (u *User) Update(data ...any) any {
+./example/modules/user/back.go:84:func (u *User) Delete(data ...any) any {
+./example/modules/user/user.go:12:func (u *User) ValidateData(action byte, data ...any) error { return nil }
+./example/modules/patient/patient.go:11:func (p *Patient) Create(data ...any) any {
+./example/modules/patient/patient.go:16:func (p *Patient) Read(data ...any) any {
+./example/modules/patient/patient.go:21:func (p *Patient) ValidateData(action byte, data ...any) error { return nil }
+./docs/ACCESS_CONTROL.md:40:cp.SetUserRoles(func(data ...any) []byte {
+./docs/HANDLER_REGISTER.md:13:- `Creator`: `Create(data ...any) any`
+./docs/HANDLER_REGISTER.md:14:- `Reader`: `Read(data ...any) any`
+./docs/HANDLER_REGISTER.md:15:- `Updater`: `Update(data ...any) any`
+./docs/HANDLER_REGISTER.md:16:- `Deleter`: `Delete(data ...any) any`
+./docs/INTEGRATION_GUIDE.md:43:func (u *User) ValidateData(action byte, data ...any) error {
+./docs/INTEGRATION_GUIDE.md:79:func (h *Handler) Create(data ...any) any {
+./docs/INTEGRATION_GUIDE.md:94:func (h *Handler) Read(data ...any) any {
+./docs/INTEGRATION_GUIDE.md:122:func (h *Handler) Read(data ...any) any {
+./docs/INTEGRATION_GUIDE.md:197:    cp.SetUserRoles(func(data ...any) []byte {
+./docs/INITIAL_VISION.md:33:func (h *Handler) Create(data ...any) any {
+./docs/INITIAL_VISION.md:46:func (h *Handler) Create(data ...any) any {
+./docs/WEBHOOKS.md:26:func (w *WebhookEvent) ValidateData(action byte, data ...any) error { return nil }
+./docs/WEBHOOKS.md:31:func (w *WebhookEvent) Create(data ...any) any {
+./docs/PLAN.md:4:> Remove the semantic ambiguity in `Read(data ...any) any` by splitting into `Read(id string)`
+./docs/PLAN.md:26:type Creator interface { Create(data ...any) any }
+./docs/PLAN.md:27:type Reader  interface { Read(data ...any) any }
+./docs/PLAN.md:28:type Updater interface { Update(data ...any) any }
+./docs/PLAN.md:29:type Deleter interface { Delete(data ...any) any }
+./docs/PLAN.md:99:- `Read(id string) (any, error)` — explicit id, no more ambiguous `data ...any`
+./docs/PLAN.md:150:Update `CallHandler` to use the new typed methods. The incoming `data ...any` is now
+./docs/PLAN.md:155:func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, error) {
+./docs/FILE_UPLOAD.md:33:func (h *Handler) Create(data ...any) any {
+./docs/HTTP_ROUTES_AND_MIDDLEWARE.md:20:Handlers receive the following injected values in the `data ...any` slice:
+./docs/HTTP_ROUTES_AND_MIDDLEWARE.md:56:func (h *UserHandler) Create(data ...any) any {
+./docs/ARCHITECTURE.md:49:| Handler signature | `func(data ...any) any` | Simplifies API and reduces binary size |
+./docs/ARCHITECTURE.md:69:type Creator interface { Create(data ...any) any }
+./docs/ARCHITECTURE.md:70:type Reader interface  { Read(data ...any) any }
+./docs/ARCHITECTURE.md:71:type Updater interface { Update(data ...any) any }
+./docs/ARCHITECTURE.md:72:type Deleter interface { Delete(data ...any) any }
+./docs/ARCHITECTURE.md:76:type Validator interface { Validate(action byte, data ...any) error }
+./interfaces.go:6:	Create(data ...any) any
+./interfaces.go:10:	Read(data ...any) any
+./interfaces.go:14:	Update(data ...any) any
+./interfaces.go:18:	Delete(data ...any) any
+./interfaces.go:26:	ValidateData(action byte, data ...any) error
+./crudp.go:14:	Create       func(data ...any) any
+./crudp.go:15:	Read         func(data ...any) any
+./crudp.go:16:	Update       func(data ...any) any
+./crudp.go:17:	Delete       func(data ...any) any
+./crudp.go:18:	ValidateData func(action byte, data ...any) error
+./crudp.go:32:	getUserRoles        func(data ...any) []byte
+./crudp.go:33:	accessCheckFn       func(resource string, action byte, data ...any) bool
+./crudp.go:35:	accessCheck         func(handler actionHandler, action byte, data ...any) error
+./crudp.go:80:func (cp *CrudP) SetUserRoles(fn func(data ...any) []byte) {
+./crudp.go:95:func (cp *CrudP) SetAccessCheck(fn func(resource string, action byte, data ...any) bool) {
+./handlers.go:54:				return Errf("missing interface: 'ValidateData(action byte, data ...any) error' for handler: %s", ah.name)
+./handlers.go:137:func (cp *CrudP) CallHandler(handlerID uint8, action byte, data ...any) (any, error) {
+./http_stlib.go:193:func (cp *CrudP) doAccessCheck(handler actionHandler, action byte, data ...any) error {
+./integration_stlib_test.go:25:func (u *IntegrationUser) Create(data ...any) any {
+./integration_stlib_test.go:36:func (u *IntegrationUser) Read(data ...any) any {
+./integration_stlib_test.go:49:func (u *IntegrationUser) ValidateData(action byte, data ...any) error { return nil }
+./integration_stlib_test.go:171:func (r *RestrictedResource) Read(data ...any) any                        { return "secret data" }
+./integration_stlib_test.go:172:func (r *RestrictedResource) ValidateData(action byte, data ...any) error { return nil }
+./integration_stlib_test.go:177:func (p *PartialRolesHandler) Create(data ...any) any { return nil }
+./integration_stlib_test.go:202:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'a'} })
+./integration_stlib_test.go:219:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'v'} }) // Role 'v' != 'a'
+./integration_stlib_test.go:246:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'v'} })
+./integration_stlib_test.go:278:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'*'} })
+./integration_stlib_test.go:287:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'m', 'r'} }) // Medic and Reception
+./integration_stlib_test.go:304:		cp.SetUserRoles(func(data ...any) []byte { return []byte("any") })
+./integration_stlib_test.go:321:		cp.SetUserRoles(func(data ...any) []byte { return nil }) // Unauthenticated
+./integration_stlib_test.go:366:		cp.SetUserRoles(func(data ...any) []byte { return []byte{'*'} })

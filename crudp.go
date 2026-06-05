@@ -2,8 +2,6 @@ package crudp
 
 import (
 	"reflect"
-
-	"github.com/tinywasm/binary"
 )
 
 type actionHandler struct {
@@ -11,11 +9,12 @@ type actionHandler struct {
 	index        uint8
 	handler      any
 	dataType     reflect.Type
-	Create       func(data ...any) any
-	Read         func(data ...any) any
-	Update       func(data ...any) any
-	Delete       func(data ...any) any
-	ValidateData func(action byte, data ...any) error
+	Create       func(payload any) (any, error)
+	Read         func(id string) (any, error)
+	List         func() (any, error)
+	Update       func(payload any) (any, error)
+	Delete       func(id string) error
+	ValidateData func(action byte, payload any) error
 	AllowedRoles func(action byte) []byte
 }
 
@@ -38,11 +37,12 @@ type CrudP struct {
 // noOpAccessCheck is a default no-op access validation
 func noOpAccessCheck(actionHandler, byte, ...any) error { return nil }
 
-// New creates a new CrudP instance with binary codec by default
+// New creates a new CrudP instance. No codec is configured by default.
+// Use SetCodecs() to provide serialization functions before execution.
 func New() *CrudP {
 	cp := &CrudP{
-		encode:      binary.Encode,
-		decode:      binary.Decode,
+		encode:      nil,
+		decode:      nil,
 		log:         func(...any) {}, // No-op logger by default
 		accessCheck: noOpAccessCheck, // No-op by default
 	}

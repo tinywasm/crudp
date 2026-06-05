@@ -30,36 +30,34 @@ type Handler struct{}
 
 func (h *Handler) HandlerName() string { return "files" }
 
-func (h *Handler) Create(data ...any) any {
-    for _, item := range data {
-        switch v := item.(type) {
-        case *http.Request:
-            // 1. Handle Multipart Upload (Server-side only logic)
-            file, header, err := v.FormFile("file")
-            if err != nil {
-                return err
-            }
-            defer file.Close()
-
-            // 2. Save file
-            path := "/uploads/" + header.Filename
-            dst, _ := os.Create(path)
-            io.Copy(dst, file)
-
-            // 3. Return the reference
-            return &FileReference{
-                ID:   "unique-id",
-                Path: path,
-                Name: header.Filename,
-            }
-
-        case *FileReference:
-            // 4. Handle JSON Metadata (Batch or Client-side)
-            // Save metadata to database...
-            return v
+func (h *Handler) Create(payload any) (any, error) {
+    switch v := payload.(type) {
+    case *http.Request:
+        // 1. Handle Multipart Upload (Server-side only logic)
+        file, header, err := v.FormFile("file")
+        if err != nil {
+            return nil, err
         }
+        defer file.Close()
+
+        // 2. Save file
+        path := "/uploads/" + header.Filename
+        dst, _ := os.Create(path)
+        io.Copy(dst, file)
+
+        // 3. Return the reference
+        return &FileReference{
+            ID:   "unique-id",
+            Path: path,
+            Name: header.Filename,
+        }, nil
+
+    case *FileReference:
+        // 4. Handle JSON Metadata (Batch or Client-side)
+        // Save metadata to database...
+        return v, nil
     }
-    return nil
+    return nil, nil
 }
 ```
 

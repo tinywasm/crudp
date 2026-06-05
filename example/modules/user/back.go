@@ -3,9 +3,6 @@
 package user
 
 import (
-	"net/http"
-
-	"github.com/tinywasm/context"
 	. "github.com/tinywasm/fmt"
 )
 
@@ -18,78 +15,52 @@ var users = []*User{
 var nextID = 3
 
 // Create handles user creation (server-side)
-func (u *User) Create(data ...any) any {
-	for _, item := range data {
-		switch v := item.(type) {
-		case *context.Context:
-			// Use context for auth, tracing, etc.
-		case *http.Request:
-			// Access headers, parse multipart, etc.
-		case *User:
-			v.ID = nextID
-			nextID++
-			users = append(users, v)
-			return v
-		}
+func (u *User) Create(payload any) (any, error) {
+	if v, ok := payload.(*User); ok {
+		v.ID = nextID
+		nextID++
+		users = append(users, v)
+		return v, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // Read handles user retrieval (server-side)
-func (u *User) Read(data ...any) any {
-	for _, item := range data {
-		if path, ok := item.(string); ok {
-			if path == "" {
-				return users // All users
-			}
-			// Find user by ID
-			for _, u := range users {
-				if Sprintf("%d", u.ID) == path {
-					return u
-				}
-			}
-			return nil
+func (u *User) Read(id string) (any, error) {
+	// Find user by ID
+	for _, u := range users {
+		if Sprintf("%d", u.ID) == id {
+			return u, nil
 		}
 	}
-	return users
+	return nil, nil
+}
+
+// List handles all user retrieval (server-side)
+func (u *User) List() (any, error) {
+	return users, nil
 }
 
 // Update handles user modification (server-side)
-func (u *User) Update(data ...any) any {
-	var targetID string
-	var updateData *User
-
-	for _, item := range data {
-		switch v := item.(type) {
-		case string:
-			targetID = v
-		case *User:
-			updateData = v
-		}
-	}
-
-	if targetID != "" && updateData != nil {
+func (u *User) Update(payload any) (any, error) {
+	if v, ok := payload.(*User); ok {
 		for _, u := range users {
-			if Sprintf("%d", u.ID) == targetID {
-				u.Name = updateData.Name
-				u.Email = updateData.Email
-				return u
+			if u.ID == v.ID { // Assuming payload has the ID to update
+				u.Name = v.Name
+				u.Email = v.Email
+				return u, nil
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // Delete handles user removal (server-side)
-func (u *User) Delete(data ...any) any {
-	for _, item := range data {
-		if path, ok := item.(string); ok {
-			for i, u := range users {
-				if Sprintf("%d", u.ID) == path {
-					users = append(users[:i], users[i+1:]...)
-					return "deleted"
-				}
-			}
+func (u *User) Delete(id string) error {
+	for i, u := range users {
+		if Sprintf("%d", u.ID) == id {
+			users = append(users[:i], users[i+1:]...)
+			return nil
 		}
 	}
 	return nil

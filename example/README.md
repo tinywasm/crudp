@@ -31,7 +31,7 @@ In CRUDP, your data model (Entity) is also your handler. This simplifies the des
 
 All CRUD entities must implement:
 - `HandlerName() string`: Unique name for registration.
-- `ValidateData(action byte, data ...any) error`: Data validation logic.
+- `ValidateData(action byte, payload any) error`: Data validation logic.
 - `AllowedRoles(action byte) []byte`: Access control (see [ACCESS_CONTROL.md](../docs/ACCESS_CONTROL.md)).
 
 ```go

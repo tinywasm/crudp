@@ -40,7 +40,7 @@ type User struct {
 func (u *User) HandlerName() string { return "users" }
 
 // Mandatory: All CRUD entities must implement DataValidator
-func (u *User) ValidateData(action byte, data ...any) error {
+func (u *User) ValidateData(action byte, payload any) error {
     return nil // Implement logic here
 }
 
@@ -76,7 +76,7 @@ var users = []*User{
     {ID: 2, Name: "Bob", Email: "bob@example.com"},
 }
 
-func (h *Handler) Create(data ...any) any {
+func (h *Handler) Create(payload any) (any, error) {
     for _, item := range data {
         switch v := item.(type) {
         case *context.Context:
@@ -91,7 +91,7 @@ func (h *Handler) Create(data ...any) any {
     return nil
 }
 
-func (h *Handler) Read(data ...any) any {
+func (h *Handler) Read(id string) (any, error) {
     for _, item := range data {
         if path, ok := item.(string); ok {
             if path == "" { return users } // All users
@@ -119,7 +119,7 @@ import (
     . "github.com/tinywasm/fmt"
 )
 
-func (h *Handler) Read(data ...any) any {
+func (h *Handler) Read(id string) (any, error) {
     for _, item := range data {
         switch v := item.(type) {
         case *User:

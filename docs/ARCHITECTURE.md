@@ -46,7 +46,7 @@ flowchart TD
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Serialization | `Encode`/`Decode` funcs | Support JSON (tinywasm/json) or Binary (tinywasm/binary) formats |
-| Handler signature | `func(data ...any) any` | Simplifies API and reduces binary size |
+| Handler signature | Explicit typed signatures | Improves safety and clarity |
 | Packet structure | Internal to `crudp` | Unified protocol definition and execution |
 | Batching | Delegated to `tinywasm/broker` | Keep CRUDP core simple and focused on execution |
 | Message types | `0-4` (uint8) | Normal, Info, Error, Warning, Success from `tinywasm/fmt` |
@@ -66,14 +66,17 @@ crudp
 
 ```go
 // CRUD interfaces - return any (result or error)
-type Creator interface { Create(data ...any) any }
-type Reader interface  { Read(data ...any) any }
-type Updater interface { Update(data ...any) any }
-type Deleter interface { Delete(data ...any) any }
+type Creator interface { Create(payload any) (any, error) }
+type Reader interface {
+	Read(id string) (any, error)
+	List() (any, error)
+}
+type Updater interface { Update(payload any) (any, error) }
+type Deleter interface { Delete(id string) error }
 
 // Optional interfaces
 type NamedHandler interface { HandlerName() string }
-type Validator interface { Validate(action byte, data ...any) error }
+type Validator interface { Validate(action byte, payload any) error }
 ```
 
 ## Implementation Status
