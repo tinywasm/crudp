@@ -44,8 +44,8 @@ func main() {
 	cp.RegisterHandlers(modules.Init()...)
 	cp.RegisterRoutes(mux)
 
-	log.Printf("Server starting on http://localhost:6060")
-	if err := http.ListenAndServe(":6060", mux); err != nil {
+	log.Printf("Server starting on http://localhost:8080")
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}
 }
